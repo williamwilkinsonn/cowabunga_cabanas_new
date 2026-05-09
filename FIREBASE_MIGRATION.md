@@ -10,8 +10,11 @@
 - `cabanas` (per-cabana session records)
 - `servers` (server list)
 - `settings` (global prices + manager/shared state)
+- `settings/weather` (weather API key + refresh + alert preferences + location)
 - `sessions` (daily/session tracking)
 - `late_arrivals` (late-joiner tracking)
+- `weather/current` (latest weather payload + timestamp)
+- `alerts/weather` (active weather alerts + lightning trigger timestamp)
 
 ## 3. Export from Supabase
 From browser console in the app:
