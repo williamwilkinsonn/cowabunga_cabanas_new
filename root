@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <title>Cowabunga Bay – Cabana Check-In</title>
 <link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <style>
 /* ═══════════════════════ THEME VARS ═══════════════════════ */
 :root{
@@ -492,11 +494,15 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
 #pw-box{background:var(--card-bg,#fff);border-radius:18px;padding:36px 32px 28px;width:min(340px,90vw);text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.35);}
 #pw-box h2{font-family:'Boogaloo',cursive;font-size:1.8rem;color:var(--ocean,#0077b6);margin-bottom:4px;}
 #pw-box p{font-size:.85rem;color:var(--sub,#889);margin-bottom:20px;}
-#pw-input{width:100%;padding:10px 14px;border:2px solid var(--border,#cde);border-radius:10px;font-family:'Nunito',sans-serif;font-size:1rem;background:var(--input-bg,#f6fbfe);color:var(--text,#023047);outline:none;margin-bottom:12px;transition:border-color .15s;}
-#pw-input:focus{border-color:var(--ocean,#0077b6);}
+#pw-email,#pw-password,#pw-input{width:100%;padding:10px 14px;border:2px solid var(--border,#cde);border-radius:10px;font-family:'Nunito',sans-serif;font-size:1rem;background:var(--input-bg,#f6fbfe);color:var(--text,#023047);outline:none;margin-bottom:10px;transition:border-color .15s;}
+#pw-email:focus,#pw-password:focus,#pw-input:focus{border-color:var(--ocean,#0077b6);}
 #pw-submit{width:100%;padding:10px;border:none;border-radius:10px;background:var(--ocean,#0077b6);color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:1rem;cursor:pointer;transition:background .15s;}
 #pw-submit:hover{background:#005f8e;}
 #pw-error{color:var(--coral,#ef476f);font-size:.8rem;margin-top:8px;min-height:1.1em;}
+.pw-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 10px;font-size:.78rem;color:var(--sub,#889);text-align:left;}
+.pw-row label{display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700;}
+.pw-link{border:none;background:none;color:var(--ocean,#0077b6);font-weight:800;cursor:pointer;padding:0;font-size:.78rem;}
+#pw-logout-banner{position:fixed;top:62px;right:10px;z-index:350;display:none;}
 
 /* ═══════════════════════ HOURLY WEATHER STRIP ═══════════════════════ */
 .hourly-weather{display:flex;gap:6px;overflow-x:auto;padding:6px 0 4px;scrollbar-width:none;}
@@ -708,13 +714,18 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
 </head>
 <body>
 
-<!-- ═══════════════ PASSWORD OVERLAY ═══════════════ -->
+<!-- ═══════════════ AUTH OVERLAY ═══════════════ -->
 <div id="pw-overlay">
   <div id="pw-box">
     <h2>🌊 CowaBunga Bay</h2>
-    <p>Enter the staff password to access the management interface.</p>
-    <input id="pw-input" type="password" placeholder="Password" autocomplete="current-password">
-    <button id="pw-submit" onclick="checkPassword()">Unlock →</button>
+    <p>Sign in with your assigned staff account.</p>
+    <input id="pw-email" type="email" placeholder="Email" autocomplete="username">
+    <input id="pw-password" type="password" placeholder="Password" autocomplete="current-password">
+    <div class="pw-row">
+      <label><input id="remember-me" type="checkbox"> Remember me</label>
+      <button class="pw-link" onclick="sendResetForTypedEmail()" type="button">Reset password</button>
+    </div>
+    <button id="pw-submit" onclick="checkPassword()">Sign In →</button>
     <div id="pw-error"></div>
   </div>
 </div>
@@ -743,7 +754,7 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
 
   <div class="weather-chip" id="weather-chip" onclick="fetchWeather()" title="Click to refresh">🌤 —</div>
 
-  <div class="sync-chip" id="sync-chip" title="Supabase real-time sync status">⏳ Connecting…</div>
+  <div class="sync-chip" id="sync-chip" title="Firebase sync status">⏳ Connecting…</div>
 
   <div class="topbar-right">
     <div class="view-tabs">
@@ -756,6 +767,7 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
     </div>
     <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle dark/light mode">🌙</button>
     <button class="icon-btn" onclick="undoLast()" id="undo-btn" title="Undo last clear" style="opacity:.4">↩️</button>
+    <button class="icon-btn" onclick="logoutUser()" id="logout-btn" title="Logout">🚪</button>
     <div id="clock" style="font-family:'Boogaloo',cursive;font-size:1rem;color:white;white-space:nowrap;"></div>
   </div>
 </div>
@@ -843,6 +855,22 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
           <div><div class="toggle-lbl">Show Server Performance Stats</div></div>
           <label class="toggle"><input type="checkbox" id="setting-show-srv-stats" onchange="saveManagerSettings();render()"><span class="toggle-slider"></span></label>
         </div>
+      </div>
+      <div class="settings-section" id="user-admin-panel" style="margin-top:12px;display:none">
+        <div class="settings-section-title">🔐 User Management (Manager Only)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:8px;">
+          <input id="new-user-email" type="email" placeholder="Email" style="padding:7px 9px;border:2px solid var(--border);border-radius:7px;background:var(--input-bg);font-family:'Nunito',sans-serif;">
+          <input id="new-user-password" type="password" placeholder="Temporary password" style="padding:7px 9px;border:2px solid var(--border);border-radius:7px;background:var(--input-bg);font-family:'Nunito',sans-serif;">
+          <select id="new-user-role" style="padding:7px 9px;border:2px solid var(--border);border-radius:7px;background:var(--input-bg);font-family:'Nunito',sans-serif;">
+            <option value="manager">Manager</option>
+            <option value="kitchen">Kitchen</option>
+            <option value="front_gate">Front Gate</option>
+            <option value="guest_service">Guest Service</option>
+          </select>
+          <button class="toolbar-btn" type="button" onclick="createManagedUser()">+ Create User</button>
+        </div>
+        <div id="user-admin-msg" style="font-size:.72rem;font-weight:700;color:var(--sub);margin-bottom:6px;"></div>
+        <div id="user-admin-list" style="display:grid;gap:6px"></div>
       </div>
     </div>
   </div>
@@ -1251,28 +1279,141 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
 
 <script>
 // ═══════════════════════════════════════
-// PASSWORD PROTECTION
+// FIREBASE AUTH + ROLE ACCESS
 // ═══════════════════════════════════════
-const PW_CORRECT='Davehuishishot!';
-(function(){
-  const overlay=document.getElementById('pw-overlay');
-  const input=document.getElementById('pw-input');
-  if(sessionStorage.getItem('cb_auth')==='1'){overlay.classList.add('hidden');return;}
-  input.addEventListener('keydown',function(e){if(e.key==='Enter')checkPassword();});
-  setTimeout(function(){input.focus();},50);
-})();
-function checkPassword(){
-  const input=document.getElementById('pw-input');
-  const error=document.getElementById('pw-error');
-  if(input.value===PW_CORRECT){
-    sessionStorage.setItem('cb_auth','1');
+const firebaseConfig={
+  apiKey:"AIzaSyD9KQwBITGm8qd-9HAsnCGsZq5k_DX4dbk",
+  authDomain:"cowabunga-cabanas.firebaseapp.com",
+  projectId:"cowabunga-cabanas",
+  storageBucket:"cowabunga-cabanas.firebasestorage.app",
+  messagingSenderId:"614476603429",
+  appId:"1:614476603429:web:95f8d41d82e221ce771fcc",
+  measurementId:"G-QMWMDMBEJX"
+};
+let fbApp=null,fbDb=null,fbAuth=null,fbPrimaryUnsubscribers=[];
+let currentUserRole=null,currentUserProfile=null,currentUid=null;
+const ROLE_VIEWS={
+  manager:['manager','kitchen','tv','reports','headcount','breakroom'],
+  kitchen:['kitchen'],
+  front_gate:['headcount'],
+  guest_service:['breakroom']
+};
+const ROLE_LABELS={manager:'Manager',kitchen:'Kitchen',front_gate:'Front Gate',guest_service:'Guest Service'};
+const INITIAL_MANAGER_EMAILS=['cabanabook@cowabungabay.com'];
+
+function initFirebase(){
+  try{
+    if(!window.firebase){setSyncChip('offline');return;}
+    fbApp=firebase.initializeApp(firebaseConfig);
+    fbDb=firebase.firestore();
+    fbAuth=firebase.auth();
+    setSyncChip('syncing');
+    bindAuthHandlers();
+  }catch(e){console.warn('initFirebase:',e);setSyncChip('offline');}
+}
+
+function bindAuthHandlers(){
+  const email=document.getElementById('pw-email');
+  const password=document.getElementById('pw-password');
+  [email,password].forEach(el=>el&&el.addEventListener('keydown',e=>{if(e.key==='Enter')checkPassword();}));
+  setTimeout(()=>email?.focus(),40);
+  fbAuth.onAuthStateChanged(async user=>{
+    if(!user){
+      currentUid=null;currentUserRole=null;currentUserProfile=null;
+      clearFirestoreListeners();
+      document.getElementById('pw-overlay').classList.remove('hidden');
+      applyRoleAccess(null);
+      setSyncChip('offline');
+      return;
+    }
+    currentUid=user.uid;
+    await ensureUserProfile(user);
     document.getElementById('pw-overlay').classList.add('hidden');
-    error.textContent='';
+    applyRoleAccess(currentUserRole);
+    switchView(defaultViewForRole(currentUserRole));
+    initFirebaseSync();
+    renderUserAdmin();
+  });
+}
+
+async function ensureUserProfile(user){
+  const userRef=fbDb.collection('users').doc(user.uid);
+  const snap=await userRef.get();
+  if(!snap.exists){
+    const normalizedEmail=(user.email||'').toLowerCase();
+    const profile=await fbDb.runTransaction(async tx=>{
+      const fresh=await tx.get(userRef);
+      if(fresh.exists) return fresh.data();
+      const bootstrapRef=fbDb.collection('settings').doc('bootstrap');
+      const bootstrapSnap=await tx.get(bootstrapRef);
+      const managerAlreadySet=bootstrapSnap.exists&&!!bootstrapSnap.data()?.managerAssigned;
+      const canBootstrapManager=!managerAlreadySet&&INITIAL_MANAGER_EMAILS.includes(normalizedEmail);
+      const role=canBootstrapManager?'manager':'guest_service';
+      const now=new Date().toISOString();
+      const profileData={uid:user.uid,email:user.email||'',role,displayName:user.displayName||'',createdAt:now,updatedAt:now};
+      tx.set(userRef,profileData,{merge:true});
+      if(canBootstrapManager){
+        tx.set(bootstrapRef,{managerAssigned:true,managerUid:user.uid,managerEmail:normalizedEmail,assignedAt:now},{merge:true});
+      }
+      return profileData;
+    });
+    currentUserProfile=profile;
   }else{
-    error.textContent='Incorrect password. Please try again.';
-    input.value='';
-    input.focus();
+    currentUserProfile=snap.data();
   }
+  currentUserRole=currentUserProfile.role||'guest_service';
+}
+
+async function checkPassword(){
+  const email=(document.getElementById('pw-email')?.value||'').trim();
+  const pw=document.getElementById('pw-password')?.value||'';
+  const remember=!!document.getElementById('remember-me')?.checked;
+  const error=document.getElementById('pw-error');
+  if(!email||!pw){error.textContent='Enter both email and password.';return;}
+  try{
+    const persistence=remember?firebase.auth.Auth.Persistence.LOCAL:firebase.auth.Auth.Persistence.SESSION;
+    await fbAuth.setPersistence(persistence);
+    await fbAuth.signInWithEmailAndPassword(email,pw);
+    error.textContent='';
+  }catch(e){
+    console.warn('signIn:',e);
+    error.textContent='Sign in failed. Check credentials or ask a manager.';
+  }
+}
+
+async function sendResetForTypedEmail(){
+  const email=(document.getElementById('pw-email')?.value||'').trim();
+  const error=document.getElementById('pw-error');
+  if(!email){error.textContent='Enter your email, then click reset password.';return;}
+  try{await fbAuth.sendPasswordResetEmail(email);error.textContent='Password reset email sent.';}catch(e){error.textContent='Could not send reset email.';}
+}
+
+async function logoutUser(){
+  try{await fbAuth.signOut();}catch(e){console.warn('logout:',e);}
+}
+
+function defaultViewForRole(role){
+  if(role==='kitchen') return 'kitchen';
+  if(role==='front_gate') return 'headcount';
+  if(role==='guest_service') return 'breakroom';
+  return 'manager';
+}
+
+function canAccessView(v){
+  const allowed=ROLE_VIEWS[currentUserRole||'']||[];
+  return allowed.includes(v);
+}
+
+function applyRoleAccess(role){
+  const tabs=['manager','kitchen','tv','headcount','breakroom','reports'];
+  tabs.forEach(t=>{
+    const tab=document.getElementById(`tab-${t}`);
+    if(tab) tab.style.display=(role&&canAccessView(t))?'':'none';
+  });
+  const adminPanel=document.getElementById('user-admin-panel');
+  if(adminPanel) adminPanel.style.display=role==='manager'?'block':'none';
+  const logoutBtn=document.getElementById('logout-btn');
+  if(logoutBtn) logoutBtn.style.display=role?'':'none';
 }
 
 // ═══════════════════════════════════════
@@ -1357,25 +1498,14 @@ function saveSharedState(){
   lss('cb_shared_state',JSON.stringify({helpNeeded,ordersOn,helpItems,alert607}));
   sbSyncKitchenState();
 }
-async function sbSyncKitchenState(){
-  if(!sb||!sbOnline) return;
-  try{
-    await sb.from('app_state').upsert({key:'kitchen',helpNeeded,ordersOn,updated_at:new Date().toISOString()},{onConflict:'key'});
-  }catch(e){console.warn('sbSyncKitchenState:',e);}
-}
-
 // ═══════════════════════════════════════
 // DEBOUNCE UTILITY
 // ═══════════════════════════════════════
 function debounce(fn,delay){let t;return function(...a){clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),delay);};}
 
 // ═══════════════════════════════════════
-// SUPABASE REAL-TIME SYNC
+// FIREBASE FIRESTORE SYNC
 // ═══════════════════════════════════════
-const SB_URL='https://vxbzslecnpxoevdthtyb.supabase.co';
-const SB_KEY='sb_publishable_rtm9ovX3xo9emn2di0wPFQ_pg4I6hzI';
-let sb=null,sbOnline=navigator.onLine,sbQueue=[];
-
 function setSyncChip(status){
   const chip=document.getElementById('sync-chip');
   if(!chip) return;
@@ -1385,163 +1515,264 @@ function setSyncChip(status){
   else if(status==='offline'){chip.textContent='🔴 Offline';chip.style.cssText='background:rgba(239,71,111,.18);color:#ef476f;';}
   else{chip.textContent='⏳ Connecting…';chip.style.cssText='';}
 }
+function sessionDocId(date,sess){return `${date}_${sess}`;}
 
-// Deduplicated enqueue: keeps only the latest entry per type/key to avoid redundant syncs
-function sbEnqueue(item){
-  if(item.t==='session'){
-    const key=`${item.d.date}|${item.d.sess}`;
-    sbQueue=sbQueue.filter(q=>!(q.t==='session'&&`${q.d.date}|${q.d.sess}`===key));
-  }else if(item.t==='servers'||item.t==='prices'){
-    sbQueue=sbQueue.filter(q=>q.t!==item.t);
-  }else if(item.t==='notes'){
-    const key=`${item.d.date}|${item.d.sess}`;
-    sbQueue=sbQueue.filter(q=>!(q.t==='notes'&&`${q.d.date}|${q.d.sess}`===key));
-  }
-  sbQueue.push(item);
+function clearFirestoreListeners(){
+  fbPrimaryUnsubscribers.forEach(unsub=>{try{unsub&&unsub();}catch(e){}});
+  fbPrimaryUnsubscribers=[];
 }
 
 async function sbSyncSession(data,date,sess){
-  if(!sb||!sbOnline){sbEnqueue({t:'session',d:{data,date,sess}});return;}
-  const d=date||currentDate,s=sess||currentSession;
+  if(!fbDb||!currentUid) return;
+  const d=date||currentDate,s=sess||currentSession,stamp=new Date().toISOString();
   setSyncChip('syncing');
   try{
-    const rows=Object.entries(data).map(([cid,cdata])=>({date:d,session:s,cabana_id:cid,data:cdata,updated_at:new Date().toISOString()}));
-    if(rows.length) await sb.from('cabana_sessions').upsert(rows,{onConflict:'date,session,cabana_id'});
+    const sid=sessionDocId(d,s);
+    await fbDb.collection('sessions').doc(sid).set({date:d,session:s,data,updatedAt:stamp,updatedBy:currentUid},{merge:true});
+    const batch=fbDb.batch();
+    Object.entries(data||{}).forEach(([cabanaId,cabana])=>{
+      const cref=fbDb.collection('cabanas').doc(`${sid}_${cabanaId}`);
+      batch.set(cref,{date:d,session:s,cabanaId,data:cabana||{},updatedAt:stamp,updatedBy:currentUid},{merge:true});
+      (cabana?.lateArrivals||[]).forEach((la,idx)=>{
+        const stableId=lateArrivalId(la,idx);
+        const lref=fbDb.collection('late_arrivals').doc(`${sid}_${cabanaId}_${stableId}`);
+        batch.set(lref,{date:d,session:s,cabanaId,name:la.name||'',ticketType:la.ticketType||'',arrivedAt:la.arrivedAt||null,updatedAt:stamp,updatedBy:currentUid},{merge:true});
+      });
+    });
+    await batch.commit();
     setSyncChip('online');
   }catch(e){console.warn('sbSyncSession:',e);setSyncChip('offline');}
 }
 
 async function sbSyncServers(){
-  if(!sb||!sbOnline){sbEnqueue({t:'servers'});return;}
-  try{
-    // Upsert current servers by name, then delete any that were removed
-    if(servers.length){
-      await sb.from('servers_list').upsert(
-        servers.map(s=>({name:s.name,color:s.color,updated_at:new Date().toISOString()})),
-        {onConflict:'name'}
-      );
-    }
-    const {data:existing}=await sb.from('servers_list').select('id,name');
-    if(existing&&existing.length){
-      const current=new Set(servers.map(s=>s.name));
-      const toDelete=existing.filter(r=>!current.has(r.name)).map(r=>r.id);
-      if(toDelete.length) await sb.from('servers_list').delete().in('id',toDelete);
-    }
-    setSyncChip('online');
-  }catch(e){console.warn('sbSyncServers:',e);}
+  if(!fbDb||!currentUid) return;
+  try{await fbDb.collection('servers').doc('current').set({items:servers||[],updatedAt:new Date().toISOString(),updatedBy:currentUid},{merge:true});setSyncChip('online');}
+  catch(e){console.warn('sbSyncServers:',e);setSyncChip('offline');}
 }
 
 async function sbSyncPrices(){
-  if(!sb||!sbOnline){sbEnqueue({t:'prices'});return;}
-  try{
-    const rows=Object.entries(prices).map(([sid,p])=>({section_id:sid,price:parseFloat(p)||0,updated_at:new Date().toISOString()}));
-    if(rows.length) await sb.from('prices_config').upsert(rows,{onConflict:'section_id'});
-    setSyncChip('online');
-  }catch(e){console.warn('sbSyncPrices:',e);}
+  if(!fbDb||!currentUid) return;
+  try{await fbDb.collection('settings').doc('global').set({prices:prices||{},updatedAt:new Date().toISOString(),updatedBy:currentUid},{merge:true});setSyncChip('online');}
+  catch(e){console.warn('sbSyncPrices:',e);setSyncChip('offline');}
 }
 
 async function sbSyncShiftNotes(date,sess,notes){
-  if(!sb||!sbOnline){sbEnqueue({t:'notes',d:{date,sess,notes}});return;}
-  try{
-    await sb.from('shift_notes').upsert({date,session:sess,notes:notes||'',updated_at:new Date().toISOString()},{onConflict:'date,session'});
-    setSyncChip('online');
-  }catch(e){console.warn('sbSyncShiftNotes:',e);}
+  if(!fbDb||!currentUid) return;
+  const d=date||currentDate,s=sess||currentSession;
+  try{await fbDb.collection('sessions').doc(sessionDocId(d,s)).set({date:d,session:s,shiftNotes:notes||'',updatedAt:new Date().toISOString(),updatedBy:currentUid},{merge:true});setSyncChip('online');}
+  catch(e){console.warn('sbSyncShiftNotes:',e);setSyncChip('offline');}
 }
 
-// Debounced sync — waits 1 second after the last call before hitting Supabase
-const sbSyncSessionDebounced=debounce(sbSyncSession,1000);
-const sbSyncShiftNotesDebounced=debounce(sbSyncShiftNotes,1000);
+const sbSyncSessionDebounced=debounce(sbSyncSession,700);
+const sbSyncShiftNotesDebounced=debounce(sbSyncShiftNotes,700);
 
-async function sbDrainQueue(){
-  if(!sb||!sbOnline||!sbQueue.length) return;
-  const q=[...sbQueue];sbQueue=[];
-  for(const item of q){
-    if(item.t==='session') await sbSyncSession(item.d.data,item.d.date,item.d.sess);
-    else if(item.t==='servers') await sbSyncServers();
-    else if(item.t==='prices') await sbSyncPrices();
-    else if(item.t==='notes') await sbSyncShiftNotes(item.d.date,item.d.sess,item.d.notes);
-  }
+async function sbSyncKitchenState(){
+  if(!fbDb||!currentUid) return;
+  try{
+    await fbDb.collection('settings').doc('global').set({
+      sharedState:{helpNeeded,ordersOn,helpItems,alert607},
+      managerSettings,
+      updatedAt:new Date().toISOString(),
+      updatedBy:currentUid
+    },{merge:true});
+    setSyncChip('online');
+  }catch(e){console.warn('sbSyncKitchenState:',e);setSyncChip('offline');}
 }
 
 async function sbInitialLoad(){
-  if(!sb) return;
+  if(!fbDb||!currentUid) return;
   try{
-    const {data:srvData}=await sb.from('servers_list').select('*').order('updated_at');
-    if(srvData&&srvData.length){servers=srvData.map(r=>({name:r.name,color:r.color}));lss('cb_servers_v2',JSON.stringify(servers));}
-    const {data:priceData}=await sb.from('prices_config').select('*');
-    if(priceData&&priceData.length){prices={};priceData.forEach(r=>{prices[r.section_id]=r.price;});lss('cb_prices',JSON.stringify(prices));}
-    const today=todayKey();
-    const {data:sessData}=await sb.from('cabana_sessions').select('*').eq('date',today);
-    if(sessData&&sessData.length){
-      const bySession={};
-      sessData.forEach(r=>{if(!bySession[r.session])bySession[r.session]={};bySession[r.session][r.cabana_id]=r.data;});
-      Object.entries(bySession).forEach(([sess,data])=>saveSessionLocal(data,today,sess));
+    const [srvSnap,settingsSnap]=await Promise.all([
+      fbDb.collection('servers').doc('current').get(),
+      fbDb.collection('settings').doc('global').get()
+    ]);
+    if(srvSnap.exists){
+      const items=srvSnap.data()?.items;
+      if(Array.isArray(items)&&items.length){servers=items;lss('cb_servers_v2',JSON.stringify(servers));}
     }
-    const {data:notesData}=await sb.from('shift_notes').select('*').eq('date',today);
-    if(notesData&&notesData.length) notesData.forEach(r=>lss(`cb_shiftnotes_${today}_${r.session}`,r.notes||''));
-      try{
-        const {data:stateData}=await sb.from('app_state').select('*').eq('key','kitchen');
-        if(stateData&&stateData.length){const s=stateData[0];helpNeeded=!!s.helpNeeded;ordersOn=!!s.ordersOn;updateHelpUI();updateOrdersUI();}
-      }catch(e){}
-    render();loadShiftNotes();
-  }catch(e){console.warn('sbInitialLoad:',e);}
+    if(settingsSnap.exists){
+      const cfg=settingsSnap.data()||{};
+      if(cfg.prices){prices=cfg.prices;lss('cb_prices',JSON.stringify(prices));}
+      if(cfg.managerSettings){managerSettings={...managerSettings,...cfg.managerSettings};lss('cb_mgrsettings',JSON.stringify(managerSettings));}
+      if(cfg.sharedState){
+        const d=cfg.sharedState;
+        helpNeeded=!!d.helpNeeded;ordersOn=!!d.ordersOn;
+        if(d.helpItems) helpItems={...helpItems,...d.helpItems};
+        if(d.alert607) alert607={...alert607,...d.alert607};
+        lss('cb_shared_state',JSON.stringify({helpNeeded,ordersOn,helpItems,alert607}));
+      }
+    }
+    for(const sess of ['AM','PM']){
+      const snap=await fbDb.collection('sessions').doc(sessionDocId(currentDate,sess)).get();
+      if(snap.exists){
+        const row=snap.data()||{};
+        if(row.data) saveSessionLocal(row.data,currentDate,sess);
+        if(typeof row.shiftNotes==='string') lss(`cb_shiftnotes_${currentDate}_${sess}`,row.shiftNotes||'');
+      }
+    }
+    render();loadShiftNotes();updateHelpUI();updateOrdersUI();
+    setSyncChip('online');
+  }catch(e){console.warn('sbInitialLoad:',e);setSyncChip('offline');}
 }
 
-function sbSetupRealtime(){
-  if(!sb) return;
-  sb.channel('cb-realtime')
-    .on('postgres_changes',{event:'*',schema:'public',table:'cabana_sessions'},payload=>{
-      const row=payload.new;if(!row||payload.eventType==='DELETE') return;
-      const saved=loadSession(row.date,row.session);
-      saved[row.cabana_id]=row.data;
-      saveSessionLocal(saved,row.date,row.session);
-      if(row.date===currentDate&&row.session===currentSession){
-        render();
-        // Delay flash to allow render cycle to complete before animating
-        setTimeout(()=>flashCard(row.cabana_id),100);
+function initFirebaseSync(){
+  if(!fbDb||!currentUid) return;
+  clearFirestoreListeners();
+  sbInitialLoad();
+
+  fbPrimaryUnsubscribers.push(
+    fbDb.collection('servers').doc('current').onSnapshot(snap=>{
+      if(!snap.exists) return;
+      const items=snap.data()?.items;
+      if(Array.isArray(items)){servers=items;lss('cb_servers_v2',JSON.stringify(servers));render();}
+    })
+  );
+
+  fbPrimaryUnsubscribers.push(
+    fbDb.collection('settings').doc('global').onSnapshot(snap=>{
+      if(!snap.exists) return;
+      const d=snap.data()||{};
+      if(d.prices){prices=d.prices;lss('cb_prices',JSON.stringify(prices));}
+      if(d.managerSettings){managerSettings={...managerSettings,...d.managerSettings};lss('cb_mgrsettings',JSON.stringify(managerSettings));}
+      if(d.sharedState){
+        helpNeeded=!!d.sharedState.helpNeeded;
+        ordersOn=!!d.sharedState.ordersOn;
+        if(d.sharedState.helpItems) helpItems={...helpItems,...d.sharedState.helpItems};
+        if(d.sharedState.alert607) alert607={...alert607,...d.sharedState.alert607};
       }
+      updateHelpUI();updateOrdersUI();render();
     })
-    .on('postgres_changes',{event:'*',schema:'public',table:'shift_notes'},payload=>{
-      const row=payload.new;if(!row) return;
-      lss(`cb_shiftnotes_${row.date}_${row.session}`,row.notes||'');
-      if(row.date===currentDate&&row.session===currentSession) loadShiftNotes();
-    })
-    .on('postgres_changes',{event:'*',schema:'public',table:'servers_list'},async ()=>{
-      const {data}=await sb.from('servers_list').select('*').order('updated_at');
-      if(data&&data.length){servers=data.map(r=>({name:r.name,color:r.color}));lss('cb_servers_v2',JSON.stringify(servers));render();}
-    })
-    .on('postgres_changes',{event:'*',schema:'public',table:'prices_config'},async ()=>{
-      const {data}=await sb.from('prices_config').select('*');
-      if(data&&data.length){prices={};data.forEach(r=>{prices[r.section_id]=r.price;});lss('cb_prices',JSON.stringify(prices));render();}
-    })
-    .on('postgres_changes',{event:'*',schema:'public',table:'app_state'},async payload=>{
-      const row=payload.new;if(!row) return;
-      if(row.key==='kitchen'){
-        ordersOn=!!row.ordersOn;
-        // helpNeeded from remote is a summary; local helpItems take precedence if set
-        if(!Object.values(helpItems).some(Boolean)) helpNeeded=!!row.helpNeeded;
-        saveSharedState();updateHelpUI();updateOrdersUI();
-      }
-    })
-    .subscribe(status=>{
-      if(status==='SUBSCRIBED') setSyncChip('online');
-      else if(status==='CLOSED'||status==='CHANNEL_ERROR') setSyncChip('offline');
-    });
+  );
+
+  ['AM','PM'].forEach(sess=>{
+    fbPrimaryUnsubscribers.push(
+      fbDb.collection('sessions').doc(sessionDocId(currentDate,sess)).onSnapshot(snap=>{
+        if(!snap.exists) return;
+        const row=snap.data()||{};
+        if(row.data) saveSessionLocal(row.data,currentDate,sess);
+        if(typeof row.shiftNotes==='string') lss(`cb_shiftnotes_${currentDate}_${sess}`,row.shiftNotes||'');
+        if(sess===currentSession){loadShiftNotes();render();}
+      })
+    );
+  });
+  setSyncChip('online');
 }
 
-function initSupabase(){
+async function renderUserAdmin(){
+  const panel=document.getElementById('user-admin-panel');
+  const list=document.getElementById('user-admin-list');
+  if(!panel||!list) return;
+  if(currentUserRole!=='manager'||!fbDb){panel.style.display='none';return;}
+  panel.style.display='block';
   try{
-    if(!window.supabase){setSyncChip('offline');return;}
-    sb=window.supabase.createClient(SB_URL,SB_KEY);
-    sbSetupRealtime();
-    sbInitialLoad();
-  }catch(e){console.warn('initSupabase:',e);setSyncChip('offline');}
+    const snap=await fbDb.collection('users').orderBy('email').get();
+    list.innerHTML=snap.docs.map(doc=>{
+      const u=doc.data()||{};
+      const opts=Object.entries(ROLE_LABELS).map(([value,label])=>`<option value="${value}" ${u.role===value?'selected':''}>${label}</option>`).join('');
+      const selfMark=doc.id===currentUid?' <span style="font-size:.62rem;color:var(--sub)">(You)</span>':'';
+      return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--dim);border:1px solid var(--border);border-radius:8px;padding:7px 8px;">
+        <div style="font-size:.75rem;font-weight:800;min-width:180px;flex:1;">${u.email||'(no email)'}${selfMark}</div>
+        <select class="user-role-select" data-uid="${doc.id}" title="${doc.id===currentUid?'Your own role cannot be changed from this panel':''}" style="padding:5px 7px;border:2px solid var(--border);border-radius:7px;background:var(--input-bg);font-weight:700;" ${doc.id===currentUid?'disabled aria-label="Current user role (locked)"':''}>${opts}</select>
+        <button class="toolbar-btn user-reset-btn" type="button" data-email="${encodeURIComponent(u.email||'')}">Reset PW</button>
+      </div>`;
+    }).join('')||'<div style="font-size:.72rem;color:var(--sub)">No users found.</div>';
+    list.querySelectorAll('.user-role-select').forEach(el=>el.addEventListener('change',()=>updateUserRole(el.dataset.uid,el.value)));
+    list.querySelectorAll('.user-reset-btn').forEach(el=>el.addEventListener('click',()=>sendResetForUser(decodeURIComponent(el.dataset.email||''))));
+  }catch(e){console.warn('renderUserAdmin:',e);}
 }
 
-window.addEventListener('online',()=>{sbOnline=true;setSyncChip('online');sbDrainQueue();});
-window.addEventListener('offline',()=>{sbOnline=false;setSyncChip('offline');});
+function setUserAdminMessage(msg,isError){
+  const el=document.getElementById('user-admin-msg');
+  if(!el) return;
+  el.style.color=isError?'#c0392b':'var(--sub)';
+  el.textContent=msg||'';
+}
+
+async function createManagedUser(){
+  if(currentUserRole!=='manager'){setUserAdminMessage('Only managers can create users.',true);return;}
+  const email=(document.getElementById('new-user-email')?.value||'').trim();
+  const password=document.getElementById('new-user-password')?.value||'';
+  const role=document.getElementById('new-user-role')?.value||'guest_service';
+  if(!email||!password){setUserAdminMessage('Enter email and temporary password.',true);return;}
+  const secondaryAuthAppName=`manager-create-${Date.now()}`;
+  let secApp;
+  try{
+    secApp=firebase.initializeApp(firebaseConfig,secondaryAuthAppName);
+    const secAuth=secApp.auth();
+    const cred=await secAuth.createUserWithEmailAndPassword(email,password);
+    await fbDb.collection('users').doc(cred.user.uid).set({uid:cred.user.uid,email,role,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:currentUid},{merge:true});
+    await secAuth.signOut();
+    setUserAdminMessage('User created successfully.',false);
+    document.getElementById('new-user-email').value='';
+    document.getElementById('new-user-password').value='';
+    await renderUserAdmin();
+  }catch(e){console.warn('createManagedUser:',e);setUserAdminMessage('Failed to create user. Email may already exist.',true);}
+  finally{try{secApp&&await secApp.delete();}catch(e){console.warn('secondary app cleanup failed:',e);}}
+}
+
+async function updateUserRole(uid,role){
+  if(currentUserRole!=='manager'||!fbDb) return;
+  if(uid===currentUid){setUserAdminMessage('You cannot change your own role for security reasons.',true);await renderUserAdmin();return;}
+  try{
+    await fbDb.collection('users').doc(uid).set({role,updatedAt:new Date().toISOString(),updatedBy:currentUid},{merge:true});
+    setUserAdminMessage('Role updated.',false);
+  }catch(e){console.warn('updateUserRole:',e);setUserAdminMessage('Could not update role.',true);}
+}
+
+async function sendResetForUser(email){
+  if(!email){setUserAdminMessage('User has no email.',true);return;}
+  try{await fbAuth.sendPasswordResetEmail(email);setUserAdminMessage(`Reset email sent to ${email}.`,false);}catch(e){setUserAdminMessage('Failed to send reset email.',true);}
+}
+
+/**
+ * Migration utility: export core Supabase tables as one JSON file.
+ * @param {string} supabaseUrl Supabase project URL
+ * @param {string} supabaseAnonKey Supabase anon/service key used for REST export
+ */
+async function exportSupabaseData(supabaseUrl,supabaseAnonKey){
+  const tables=['users','cabana_sessions','servers_list','prices_config','shift_notes','app_state'];
+  const out={};
+  for(const table of tables){
+    const res=await fetch(`${supabaseUrl}/rest/v1/${table}?select=*`,{headers:{apikey:supabaseAnonKey,Authorization:`Bearer ${supabaseAnonKey}`}});
+    out[table]=res.ok?await res.json():[];
+  }
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`supabase_export_${todayKey()}.json`;
+  a.click();
+}
+
+/**
+ * Migration utility: import Supabase-exported payload into Firebase collections.
+ * Expected keys: users, cabana_sessions, servers_list, prices_config, shift_notes, app_state.
+ * @param {Record<string, any[]>} payload Parsed Supabase export JSON
+ */
+async function importFirebaseMigration(payload){
+  if(currentUserRole!=='manager'||!fbDb) throw new Error('Manager access required');
+  const bySession={};
+  (payload.cabana_sessions||[]).forEach(r=>{
+    const k=`${r.date}_${r.session}`;
+    if(!bySession[k]) bySession[k]={date:r.date,session:r.session,data:{}};
+    bySession[k].data[r.cabana_id]=r.data||{};
+  });
+  for(const [sid,row] of Object.entries(bySession)) await fbDb.collection('sessions').doc(sid).set(row,{merge:true});
+  const prices={};(payload.prices_config||[]).forEach(r=>{prices[r.section_id]=r.price;});
+  const servers=(payload.servers_list||[]).map(r=>({name:r.name,color:r.color}));
+  await fbDb.collection('servers').doc('current').set({items:servers,updatedAt:new Date().toISOString(),updatedBy:currentUid},{merge:true});
+  await fbDb.collection('settings').doc('global').set({prices,updatedAt:new Date().toISOString(),updatedBy:currentUid},{merge:true});
+  for(const u of (payload.users||[])){if(u.uid) await fbDb.collection('users').doc(u.uid).set(u,{merge:true});}
+}
+
+window.addEventListener('online',()=>setSyncChip('online'));
+window.addEventListener('offline',()=>setSyncChip('offline'));
 
 // ═══════════════════════════════════════
+function lateArrivalId(la,idx){
+  if(la&&la.id) return String(la.id).replace(/[^a-zA-Z0-9_-]/g,'');
+  return `la_${idx}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
+}
+
 function blankCab(id,section,label){
   return {id,section,label,group:'',count:'',server:'',status:'available',
     eventType:'',seasonPass:false,allDay:false,linkedGroup:'',
@@ -1578,7 +1809,14 @@ function lighten(hex){try{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.sli
 // ═══════════════════════════════════════
 // DATE / SESSION
 // ═══════════════════════════════════════
-function changeDay(d){const dt=new Date(currentDate+'T12:00:00');dt.setDate(dt.getDate()+d);currentDate=dt.toISOString().slice(0,10);updateDateLabel();render();}
+function changeDay(d){
+  const dt=new Date(currentDate+'T12:00:00');
+  dt.setDate(dt.getDate()+d);
+  currentDate=dt.toISOString().slice(0,10);
+  updateDateLabel();
+  if(currentUid) initFirebaseSync();
+  render();
+}
 function setSession(s){currentSession=s;document.getElementById('btn-am').classList.toggle('active',s==='AM');document.getElementById('btn-pm').classList.toggle('active',s==='PM');loadShiftNotes();render();}
 function updateDateLabel(){const d=new Date(currentDate+'T12:00:00');document.getElementById('date-label').textContent=currentDate===todayKey()?'Today':d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 
@@ -2340,7 +2578,7 @@ function openModal(id){
   document.getElementById('wb-meal-section').style.display=c.wristbandColor==='meal-dessert'?'block':'none';
   document.querySelectorAll('.wb-meal-btn').forEach(b=>b.classList.toggle('selected',b.dataset.meal===c.wristbandMealType));
   // Late arrivals
-  modalLateArrivals=[...(c.lateArrivals||[])];
+  modalLateArrivals=[...(c.lateArrivals||[])].map((la,i)=>({id:la.id||lateArrivalId(la,i),name:la.name||'',ticketType:la.ticketType||'Over 48"',arrivedAt:la.arrivedAt||null}));
   renderLateArrivalsModal();
   updateDessertUI();updateAllergyUI();
   const al=document.getElementById('f-allergy');
@@ -2459,7 +2697,7 @@ function addLateArrival(){
   const typeEl=document.getElementById('late-type-input');
   const name=nameEl?.value.trim();
   if(!name) return;
-  modalLateArrivals.push({name,ticketType:typeEl.value,arrivedAt:null});
+  modalLateArrivals.push({id:lateArrivalId(null,modalLateArrivals.length),name,ticketType:typeEl.value,arrivedAt:null});
   nameEl.value='';
   renderLateArrivalsModal();
 }
@@ -2864,6 +3102,7 @@ function renderDayDetail(dateStr){
 // VIEW SWITCH
 // ═══════════════════════════════════════
 function switchView(v){
+  if(currentUserRole&&!canAccessView(v)){v=defaultViewForRole(currentUserRole);}
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.getElementById(`${v}-view`).classList.add('active');
   ['manager','kitchen','tv','headcount','breakroom','reports'].forEach(t=>{const el=document.getElementById(`tab-${t}`);if(el)el.classList.toggle('active',t===v);});
@@ -2901,7 +3140,7 @@ if(!breakroomDark){const bv=document.getElementById('breakroom-view');if(bv){bv.
 if(!headcountDark){const hv=document.getElementById('headcount-view');if(hv)hv.classList.add('hc-light');}
 updateDateLabel();loadShiftNotes();render();
 fetchWeather();
-initSupabase();
+initFirebase();
 </script>
 </body>
 </html>
