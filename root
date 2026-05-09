@@ -1,0 +1,2907 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Cowabunga Bay – Cabana Check-In</title>
+<link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ═══════════════════════ THEME VARS ═══════════════════════ */
+:root{
+  --ocean:#0077b6;--sky:#48cae4;--sand:#ffd166;--coral:#ef476f;
+  --mint:#06d6a0;--dark:#023047;--mid:#1a4a63;--pale:#e8f6fb;
+  --c-avail:#94a3b8;--c-res:#f59e0b;--c-in:#06d6a0;
+  --bg-avail:#f8fafc;--bg-res:#fffbeb;--bg-in:#edfaf5;
+  --brd-avail:#cbd5e1;--brd-res:#fbbf24;--brd-in:#34d399;
+  --paid-bg:#dcfce7;--paid-brd:#22c55e;--paid-clr:#15803d;
+  --page-bg:#f0f7fb;--card-bg:#ffffff;--text:#023047;
+  --panel-bg:#ffffff;--input-bg:#f6fbfe;--border:#cde;
+  --sub:#889;--dim:rgba(2,48,71,.06);
+}
+[data-theme="dark"]{
+  --page-bg:#0d1117;--card-bg:#161b22;--text:#e6edf3;
+  --panel-bg:#21262d;--input-bg:#0d1117;--border:#30363d;
+  --sub:#8b949e;--dim:rgba(255,255,255,.04);
+  --bg-avail:#161b22;--bg-res:#1e1a0e;--bg-in:#0e1e18;
+  --brd-avail:#30363d;--brd-res:#5c4a0a;--brd-in:#1a5c40;
+  --pale:#21262d;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .2s,color .2s;}
+
+/* ═══════════════════════ TOPBAR ═══════════════════════ */
+.topbar{background:linear-gradient(135deg,#012233 0%,#0077b6 65%,#48cae4 100%);padding:0 8px;display:flex;align-items:center;height:54px;border-bottom:3px solid var(--sand);position:sticky;top:0;z-index:300;gap:5px;}
+.brand{font-family:'Boogaloo',cursive;font-size:1.2rem;color:var(--sand);white-space:nowrap;line-height:1;flex-shrink:0;}
+.brand small{display:block;font-family:'Nunito',sans-serif;font-size:.52rem;font-weight:800;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:1px;}
+
+/* Session info + countdown */
+.sess-info{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.date-nav{display:flex;align-items:center;gap:1px;background:rgba(255,255,255,.12);border-radius:7px;padding:1px 3px;}
+.date-nav button{background:none;border:none;color:white;font-size:.8rem;cursor:pointer;padding:2px 4px;border-radius:4px;}
+.date-nav button:hover{background:rgba(255,255,255,.15);}
+.date-label{font-weight:800;font-size:.7rem;color:white;white-space:nowrap;min-width:62px;text-align:center;}
+.sess-grp{display:flex;gap:3px;}
+.sess-btn{padding:3px 9px;border-radius:6px;border:2px solid rgba(255,255,255,.22);background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);font-family:'Nunito',sans-serif;font-weight:800;font-size:.65rem;cursor:pointer;transition:all .15s;white-space:nowrap;line-height:1.4;}
+.sess-btn.active{background:var(--sand);color:var(--dark);border-color:var(--sand);}
+.countdown-chip{background:rgba(255,255,255,.12);border-radius:6px;padding:3px 8px;font-size:.62rem;font-weight:800;color:rgba(255,255,255,.8);white-space:nowrap;display:flex;align-items:center;gap:3px;}
+.countdown-chip.urgent{background:rgba(239,71,111,.35);color:#fecdd3;}
+.sync-chip{background:rgba(255,255,255,.12);border-radius:6px;padding:3px 8px;font-size:.62rem;font-weight:800;color:rgba(255,255,255,.7);white-space:nowrap;display:flex;align-items:center;gap:3px;flex-shrink:0;transition:background .3s,color .3s;}
+
+/* Weather */
+.weather-chip{background:rgba(255,255,255,.12);border-radius:6px;padding:3px 8px;font-size:.7rem;font-weight:800;color:white;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:3px;flex-shrink:0;}
+
+/* Search */
+.search-wrap{flex:1;max-width:180px;position:relative;}
+.search-wrap input{width:100%;padding:4px 8px 4px 26px;border-radius:6px;border:none;background:rgba(255,255,255,.15);color:white;font-family:'Nunito',sans-serif;font-weight:700;font-size:.72rem;}
+.search-wrap input::placeholder{color:rgba(255,255,255,.5);}
+.search-wrap input:focus{outline:none;background:rgba(255,255,255,.25);}
+.search-icon{position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:.75rem;pointer-events:none;}
+
+/* Right controls */
+.topbar-right{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.view-tabs{display:flex;background:rgba(255,255,255,.1);border-radius:7px;padding:2px;gap:2px;}
+.view-tab{padding:3px 8px;border:none;border-radius:5px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.6rem;cursor:pointer;color:rgba(255,255,255,.5);background:transparent;transition:all .15s;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
+.view-tab.active{background:var(--sand);color:var(--dark);}
+#clock{font-family:'Boogaloo',cursive;font-size:1rem;color:white;white-space:nowrap;}
+.icon-btn{background:rgba(255,255,255,.12);border:none;color:white;width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.icon-btn:hover{background:rgba(255,255,255,.22);}
+
+/* ═══════════════════════ VIEWS ═══════════════════════ */
+.view{display:none;}.view.active{display:block;}
+
+/* ═══════════════════════ SHARED PANELS ═══════════════════════ */
+.panel{background:var(--panel-bg);border-radius:14px;padding:11px 13px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.07);}
+.panel h3{font-family:'Boogaloo',cursive;font-size:1.05rem;color:var(--ocean);margin-bottom:8px;}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.panel-hdr h3{margin-bottom:0;}
+.panel-hint{font-size:.65rem;color:var(--sub);font-weight:700;font-style:italic;}
+
+/* ═══════════════════════ MANAGER VIEW ═══════════════════════ */
+#manager-view{background:var(--page-bg);min-height:calc(100vh - 57px);padding:10px;}
+
+/* Toolbar row */
+.mgr-toolbar{display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;align-items:center;}
+.toolbar-btn{padding:5px 12px;border-radius:8px;border:2px solid var(--border);background:var(--panel-bg);color:var(--ocean);font-family:'Nunito',sans-serif;font-weight:800;font-size:.72rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:4px;}
+.toolbar-btn:hover{background:var(--pale);border-color:var(--sky);}
+.toolbar-btn.danger{color:var(--coral);border-color:var(--coral);}
+.toolbar-btn.success{color:var(--mint);border-color:var(--mint);}
+
+/* Server chips */
+.server-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:26px;}
+.srv-chip{display:flex;align-items:center;border-radius:20px;font-size:.73rem;font-weight:800;border:2.5px solid;overflow:hidden;transition:all .15s;user-select:none;}
+.srv-chip.is-filtered{outline:3px solid var(--sc,#aaa);outline-offset:2px;box-shadow:0 3px 12px rgba(0,0,0,.18);}
+.srv-chip-color{width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;position:relative;}
+.srv-chip-color input[type=color]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:none;padding:0;}
+.srv-chip-color .cdot{width:9px;height:9px;border-radius:50%;pointer-events:none;}
+.srv-chip-name{padding:0 5px 0 3px;cursor:pointer;}
+.srv-chip .rm{background:none;border:none;cursor:pointer;font-size:.9rem;line-height:1;padding:0 6px 0 0;font-weight:900;opacity:.6;}
+.srv-chip .rm:hover{opacity:1;}
+.add-srv-row{display:flex;gap:5px;}
+.add-srv-row input{flex:1;padding:5px 9px;border:2px solid var(--border);border-radius:7px;font-family:'Nunito',sans-serif;font-size:.82rem;color:var(--text);background:var(--input-bg);}
+.add-srv-row input:focus{outline:none;border-color:var(--sky);}
+.btn-add{padding:5px 11px;background:var(--ocean);color:white;border:none;border-radius:7px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.74rem;cursor:pointer;}
+
+/* Workload bar */
+.workload-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.workload-item{flex:1;min-width:90px;background:var(--dim);border-radius:8px;padding:6px 9px;}
+.workload-name{font-size:.65rem;font-weight:800;color:var(--text);margin-bottom:3px;display:flex;align-items:center;gap:5px;}
+.workload-name .wd{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.workload-bar-bg{height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.workload-bar-fill{height:100%;border-radius:3px;transition:width .4s;}
+.workload-nums{font-size:.6rem;font-weight:800;color:var(--sub);margin-top:2px;}
+
+/* Shift notes */
+.shift-notes-area{width:100%;padding:7px 10px;border:2px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:.82rem;color:var(--text);background:var(--input-bg);resize:vertical;min-height:54px;}
+.shift-notes-area:focus{outline:none;border-color:var(--sky);}
+
+/* Pricing */
+.price-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:7px;}
+.price-row{display:flex;flex-direction:column;gap:2px;}
+.price-row label{font-size:.65rem;font-weight:800;color:var(--mid);text-transform:uppercase;letter-spacing:.4px;}
+.price-wrap{display:flex;align-items:center;gap:3px;background:var(--pale);border:2px solid var(--border);border-radius:7px;padding:4px 8px;}
+.price-wrap span{font-weight:800;color:var(--sub);font-size:.84rem;}
+.price-wrap input{border:none;background:transparent;font-family:'Nunito',sans-serif;font-size:.84rem;font-weight:800;color:var(--text);width:55px;}
+.price-wrap input:focus{outline:none;}
+
+/* Filter bar */
+.filter-bar{background:var(--panel-bg);border-radius:10px;padding:6px 11px;margin-bottom:9px;box-shadow:0 2px 7px rgba(0,0,0,.06);display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.fbar-lbl{font-size:.65rem;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
+.fbtn{padding:3px 10px;border-radius:18px;border:2px solid;font-family:'Nunito',sans-serif;font-weight:800;font-size:.67rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.fbtn-all      {border-color:#cbd5e1;background:var(--bg-avail);color:#64748b;}
+.fbtn-available{border-color:var(--brd-avail);background:var(--bg-avail);color:#64748b;}
+.fbtn-reserved {border-color:var(--brd-res);background:var(--bg-res);color:#92400e;}
+.fbtn-checkedin{border-color:var(--brd-in);background:var(--bg-in);color:#065f46;}
+.fbtn.is-active{box-shadow:0 2px 8px rgba(0,0,0,.13);transform:translateY(-1px);filter:brightness(.91);}
+.active-banner{display:none;background:linear-gradient(90deg,var(--ocean),var(--sky));color:white;border-radius:9px;padding:5px 11px;margin-bottom:9px;align-items:center;justify-content:space-between;font-size:.75rem;font-weight:800;}
+.active-banner.show{display:flex;}
+.active-banner button{background:rgba(255,255,255,.22);border:none;color:white;padding:2px 7px;border-radius:4px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.67rem;cursor:pointer;}
+
+/* Stats */
+.stats-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.stat-pill{background:var(--panel-bg);border-radius:10px;padding:7px 10px;display:flex;align-items:center;gap:7px;box-shadow:0 2px 7px rgba(0,0,0,.06);flex:1;min-width:72px;}
+.stat-icon{font-size:1rem;}
+.stat-num{font-weight:900;font-size:1rem;color:var(--text);line-height:1;}
+.stat-lbl{font-size:.57rem;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;}
+
+/* Sections */
+.section{margin-bottom:16px;}
+.section-hdr{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
+.section-title{font-family:'Boogaloo',cursive;font-size:1.22rem;color:var(--ocean);}
+.editable-label{cursor:pointer;border-bottom:1px dashed var(--sky);}
+.editable-label:hover{color:var(--sky);}
+.sec-badges{display:flex;gap:4px;flex-wrap:wrap;}
+.sec-badge{font-size:.58rem;font-weight:800;padding:2px 6px;border-radius:18px;text-transform:uppercase;white-space:nowrap;}
+.scb-in {background:var(--c-in);color:white;}
+.scb-res{background:var(--c-res);color:white;}
+.scb-avl{background:#e2e8f0;color:#475569;}
+.section-line{flex:1;height:2px;background:linear-gradient(90deg,var(--sky),transparent);border-radius:2px;}
+.cabana-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:9px;}
+.fun-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:9px;}
+
+/* Cabana card */
+.cab-card{border-radius:13px;border:2.5px solid;cursor:pointer;transition:transform .15s,box-shadow .15s,opacity .2s;position:relative;overflow:hidden;}
+.cab-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.12);}
+.card-band{position:absolute;top:0;left:0;bottom:0;width:6px;}
+.card-inner{padding:9px 9px 9px 14px;}
+.cab-card.s-available{background:var(--bg-avail);border-color:var(--brd-avail);}
+.cab-card.s-reserved {background:var(--bg-res); border-color:var(--brd-res);}
+.cab-card.s-checkedin{background:var(--bg-in);  border-color:var(--brd-in);}
+.cab-card.s-paid     {background:var(--paid-bg);border-color:var(--paid-brd);}
+.cab-card.dimmed{opacity:.22;pointer-events:none;}
+.cab-card.linked{box-shadow:0 0 0 3px rgba(120,80,220,.35);}
+.cab-card.just-updated{animation:flashCard .8s ease;}
+@keyframes flashCard{0%{box-shadow:0 0 0 4px rgba(255,209,102,.8)}100%{box-shadow:none}}
+
+/* Search hide */
+.cab-card.search-hidden{display:none!important;}
+
+.cab-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2px;gap:2px;}
+.cab-name{font-family:'Boogaloo',cursive;font-size:1rem;color:var(--text);line-height:1.1;}
+.status-badge{font-size:.56rem;font-weight:900;padding:2px 6px;border-radius:18px;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0;}
+.sb-available{background:#e2e8f0;color:#475569;}
+.sb-reserved {background:#fef3c7;color:#92400e;border:1px solid #fbbf24;}
+.sb-checkedin{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;}
+.sb-paid     {background:var(--paid-bg);color:var(--paid-clr);border:1.5px solid var(--paid-brd);}
+.paid-stamp{position:absolute;top:5px;right:7px;font-family:'Boogaloo',cursive;font-size:.9rem;color:var(--paid-clr);border:2px solid var(--paid-brd);border-radius:5px;padding:1px 6px;background:var(--paid-bg);letter-spacing:1px;transform:rotate(-3deg);pointer-events:none;z-index:2;}
+
+.cab-group{font-size:.75rem;font-weight:800;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cab-group.no-grp{color:#b0c4d4;font-style:italic;font-weight:600;}
+.cab-tags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:5px;align-items:center;}
+.tag{display:inline-flex;align-items:center;gap:2px;padding:1px 5px;border-radius:9px;font-size:.62rem;font-weight:800;white-space:nowrap;}
+.tag-server{color:white;}
+.tag-sp    {background:#fef9c3;color:#854d0e;border:1px solid #fde047;}
+.tag-allday{background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd;}
+.tag-linked{background:#f0fdf4;color:#166534;border:1px solid #86efac;}
+.tag-tickets{background:#fce7f3;color:#9d174d;border:1px solid #f9a8d4;}
+.tag-price {background:#f0f9ff;color:#075985;border:1px solid #bae6fd;}
+.tag-cap   {background:var(--bg-avail);color:#475569;border:1px solid #cbd5e1;}
+.tag-event {background:#fdf4ff;color:#7e22ce;border:1px solid #e9d5ff;}
+.tag-cake  {background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;}
+.tag-allergy{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;}
+.tag-food  {background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}
+.tag-time  {background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;}
+.tag-photo {background:#fdf4ff;color:#7e22ce;border:1px solid #e9d5ff;}
+
+.cab-notes{margin-top:4px;margin-bottom:5px;padding:4px 7px;background:#fffbf0;border-left:3px solid var(--sand);border-radius:0 5px 5px 0;font-size:.68rem;font-weight:700;color:#7a6500;line-height:1.3;word-break:break-word;}
+.cab-notes-lbl{font-size:.56rem;font-weight:900;color:#b99500;text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px;}
+
+/* Card action buttons */
+.card-actions{display:flex;gap:4px;margin-top:6px;}
+.btn-edit{flex:1;padding:5px;border:none;border-radius:6px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.7rem;cursor:pointer;background:rgba(0,119,182,.07);color:var(--ocean);border:1.5px solid rgba(0,119,182,.18);transition:all .13s;}
+.btn-edit:hover{background:rgba(0,119,182,.13);}
+.btn-quick{padding:5px 8px;border:none;border-radius:6px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.68rem;cursor:pointer;white-space:nowrap;transition:all .13s;flex-shrink:0;}
+.btn-quick-checkin{background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7;}
+.btn-quick-checkin:hover{background:#a7f3d0;}
+.btn-quick-dup{background:#ede9fe;color:#5b21b6;border:1.5px solid #c4b5fd;}
+.btn-quick-dup:hover{background:#ddd6fe;}
+.btn-remove-group{width:100%;margin-top:3px;padding:4px;border:none;border-radius:6px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.68rem;cursor:pointer;background:#fde8ea;color:#c0392b;}
+
+/* Funbrella card */
+.fun-card{border-radius:13px;border:2.5px solid;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden;}
+.fun-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.12);}
+.fun-card-band{position:absolute;top:0;left:0;bottom:0;width:6px;}
+.fun-card-inner{padding:9px 9px 9px 14px;}
+.fun-card.s-available{background:var(--bg-avail);border-color:var(--brd-avail);}
+.fun-card.s-reserved {background:var(--bg-res); border-color:var(--brd-res);}
+.fun-card.s-checkedin{background:var(--bg-in);  border-color:var(--brd-in);}
+.fun-card.s-paid     {background:var(--paid-bg);border-color:var(--paid-brd);}
+.fun-card.dimmed{opacity:.22;pointer-events:none;}
+.fun-card.just-updated{animation:flashCard .8s ease;}
+
+/* Waitlist */
+.waitlist-section{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+.waitlist-title{font-size:.68rem;font-weight:900;color:var(--coral);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.waitlist-item{display:flex;align-items:center;gap:7px;padding:5px 8px;background:var(--dim);border-radius:8px;margin-bottom:4px;font-size:.73rem;font-weight:700;color:var(--text);}
+.waitlist-item .wl-num{font-family:'Boogaloo',cursive;font-size:1rem;color:var(--coral);width:18px;flex-shrink:0;}
+.waitlist-item .wl-name{flex:1;}
+.waitlist-item .wl-rm{background:none;border:none;cursor:pointer;color:var(--coral);font-size:.9rem;font-weight:900;padding:0;}
+.add-waitlist-row{display:flex;gap:5px;margin-top:5px;}
+.add-waitlist-row input{flex:1;padding:4px 8px;border:2px solid var(--border);border-radius:7px;font-family:'Nunito',sans-serif;font-size:.76rem;color:var(--text);background:var(--input-bg);}
+.add-waitlist-row input:focus{outline:none;border-color:var(--coral);}
+.btn-add-waitlist{padding:4px 10px;background:var(--coral);color:white;border:none;border-radius:7px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.7rem;cursor:pointer;}
+
+/* ═══════════════════════ MODAL ═══════════════════════ */
+.overlay{display:none;position:fixed;inset:0;background:rgba(2,48,71,.7);z-index:500;align-items:center;justify-content:center;padding:8px;}
+.overlay.open{display:flex;}
+.modal{background:var(--panel-bg);border-radius:18px;padding:16px;width:100%;max-width:500px;box-shadow:0 24px 60px rgba(0,0,0,.32);animation:pop .17s ease;max-height:96vh;overflow-y:auto;}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-title{font-family:'Boogaloo',cursive;font-size:1.3rem;color:var(--ocean);margin-bottom:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.modal-allday-badge{font-size:.6rem;font-weight:900;background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd;padding:2px 7px;border-radius:11px;text-transform:uppercase;}
+.field{margin-bottom:10px;}
+.field label{display:block;font-weight:800;font-size:.7rem;color:var(--mid);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+.field input,.field select,.field textarea{width:100%;padding:7px 9px;border:2px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:.86rem;color:var(--text);background:var(--input-bg);}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--sky);}
+.stog-row{display:flex;gap:4px;flex-wrap:wrap;}
+.stog{flex:1;min-width:70px;padding:6px 2px;border-radius:7px;border:2.5px solid;font-family:'Nunito',sans-serif;font-weight:800;font-size:.67rem;cursor:pointer;text-align:center;transition:all .13s;}
+.stog-available{border-color:var(--brd-avail);background:var(--bg-avail);color:#475569;}
+.stog-reserved {border-color:var(--brd-res); background:var(--bg-res); color:#92400e;}
+.stog-checkedin{border-color:var(--brd-in);  background:var(--bg-in);  color:#065f46;}
+.stog-paid     {border-color:var(--paid-brd);background:var(--paid-bg);color:var(--paid-clr);}
+.stog.sel{box-shadow:0 2px 10px rgba(0,0,0,.14);transform:translateY(-1px);filter:brightness(.9);}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);}
+.toggle-row:last-child{border-bottom:none;}
+.toggle-lbl{font-size:.77rem;font-weight:800;color:var(--text);}
+.toggle-sub{font-size:.63rem;color:var(--sub);font-weight:600;margin-top:1px;}
+.toggle{position:relative;width:38px;height:22px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-slider{position:absolute;inset:0;border-radius:22px;background:#ddd;cursor:pointer;transition:background .2s;}
+.toggle-slider::before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;border-radius:50%;background:white;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+.toggle input:checked+.toggle-slider{background:var(--ocean);}
+.toggle input:checked+.toggle-slider::before{transform:translateX(16px);}
+.ticket-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px;}
+.ticket-field{display:flex;flex-direction:column;gap:2px;}
+.ticket-field label{font-size:.63rem;font-weight:800;color:#667;text-transform:uppercase;letter-spacing:.3px;}
+.ticket-field input{width:100%;padding:5px 7px;border:2px solid var(--border);border-radius:6px;font-family:'Nunito',sans-serif;font-size:.84rem;color:var(--text);background:var(--input-bg);text-align:center;}
+.link-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;}
+.link-chip{padding:3px 8px;border-radius:18px;border:2px solid #c4b5fd;background:#ede9fe;color:#5b21b6;font-size:.67rem;font-weight:800;cursor:pointer;transition:all .13s;}
+.link-chip.linked{background:#7c3aed;color:white;border-color:#7c3aed;}
+.modal-divider{font-size:.64rem;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin:9px 0 6px;display:flex;align-items:center;gap:6px;}
+.modal-divider::before,.modal-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.modal-actions{display:flex;gap:5px;margin-top:12px;}
+.modal-actions button{flex:1;padding:9px;border:none;border-radius:8px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.8rem;cursor:pointer;transition:all .13s;}
+.modal-actions button:active{transform:scale(.97);}
+.btn-save  {background:var(--ocean);color:white;}
+.btn-save:hover{background:#005f8e;}
+.btn-clear {background:#fde8ea;color:#c0392b;}
+.btn-clear:hover{background:#fbd0d3;}
+.btn-cancel{background:var(--pale);color:var(--mid);}
+
+/* Photo section in modal */
+.photo-area{margin-top:6px;}
+.photo-thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+.photo-thumb{position:relative;width:70px;height:70px;border-radius:8px;overflow:hidden;border:2px solid var(--border);}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.photo-thumb .del-photo{position:absolute;top:2px;right:2px;background:rgba(239,71,111,.85);color:white;border:none;border-radius:50%;width:17px;height:17px;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:900;}
+.photo-btns{display:flex;gap:5px;}
+.btn-photo{padding:6px 11px;border-radius:7px;border:2px solid var(--border);background:var(--input-bg);color:var(--ocean);font-family:'Nunito',sans-serif;font-weight:800;font-size:.72rem;cursor:pointer;display:flex;align-items:center;gap:4px;}
+.btn-photo:hover{background:var(--pale);}
+
+/* Label rename popover */
+.rename-input{font-family:'Boogaloo',cursive;font-size:1.22rem;color:var(--ocean);border:none;border-bottom:2px solid var(--sky);background:transparent;outline:none;width:100%;max-width:160px;}
+
+/* ═══════════════════════ KITCHEN VIEW ═══════════════════════ */
+#kitchen-view{background:#1a1a2e;min-height:calc(100vh - 57px);padding:12px;}
+.kitchen-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px;}
+.kitchen-title{font-family:'Boogaloo',cursive;font-size:1.5rem;color:#f8fafc;letter-spacing:1px;}
+.kitchen-subtitle{font-size:.74rem;font-weight:700;color:rgba(255,255,255,.4);margin-top:2px;}
+.kitchen-section-title{font-family:'Boogaloo',cursive;font-size:1rem;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid rgba(255,255,255,.08);}
+.kitchen-section{margin-bottom:16px;}
+.kitchen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:7px;}
+.k-card{border-radius:11px;padding:10px 11px;border:1.5px solid;background:rgba(255,255,255,.04);position:relative;overflow:hidden;}
+.k-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:5px;}
+.k-card.s-available{border-color:rgba(148,163,184,.2);opacity:.35;}
+.k-card.s-available::before{background:#475569;}
+.k-card.s-reserved {border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.07);}
+.k-card.s-reserved::before{background:#f59e0b;}
+.k-card.s-checkedin{border-color:rgba(6,214,160,.3);background:rgba(6,214,160,.07);}
+.k-card.s-checkedin::before{background:#06d6a0;}
+.k-card.s-paid{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.1);}
+.k-card.s-paid::before{background:#22c55e;}
+.k-card-srv-band{position:absolute;top:0;left:0;bottom:0;width:5px;}
+.k-name{font-family:'Boogaloo',cursive;font-size:.95rem;color:white;margin-bottom:1px;}
+.k-group{font-size:.79rem;font-weight:800;color:rgba(255,255,255,.85);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.k-group.empty{color:rgba(255,255,255,.25);font-style:italic;font-weight:600;}
+.k-row{display:flex;align-items:center;gap:4px;font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:3px;flex-wrap:wrap;}
+.k-badge{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:9px;font-size:.63rem;font-weight:800;}
+.k-badge-srv{color:white;}
+.k-badge-cake{background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);}
+.k-badge-allergy{background:rgba(239,68,68,.18);color:#fca5a5;border:1px solid rgba(239,68,68,.3);}
+.k-badge-event{background:rgba(168,85,247,.15);color:#d8b4fe;border:1px solid rgba(168,85,247,.3);}
+.k-badge-food{background:rgba(6,214,160,.12);color:#6ee7b7;border:1px solid rgba(6,214,160,.25);}
+.k-badge-paid{background:rgba(34,197,94,.2);color:#86efac;border:1px solid rgba(34,197,94,.35);}
+.k-status-pill{font-size:.57rem;font-weight:900;padding:2px 6px;border-radius:18px;text-transform:uppercase;margin-left:auto;flex-shrink:0;}
+.k-sp-available{background:rgba(148,163,184,.2);color:#94a3b8;}
+.k-sp-reserved{background:rgba(245,158,11,.25);color:#fbbf24;}
+.k-sp-checkedin{background:rgba(6,214,160,.25);color:#06d6a0;}
+.k-sp-paid{background:rgba(34,197,94,.3);color:#22c55e;}
+
+/* ═══════════════════════ TV VIEW ═══════════════════════ */
+#tv-view{background:#010f1a;min-height:calc(100vh - 57px);padding:12px;}
+#tv-view.tv-zoom .tv-card-name{font-size:1.25rem;}
+#tv-view.tv-zoom .tv-card-group{font-size:1rem;}
+#tv-view.tv-zoom .tv-card-badge{font-size:.75rem;}
+#tv-view.tv-zoom .tv-card-detail{font-size:.82rem;}
+#tv-view.tv-zoom .tv-grid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr));}
+.tv-controls{display:flex;gap:6px;justify-content:flex-end;margin-bottom:8px;flex-wrap:wrap;}
+.tv-ctrl-btn{padding:4px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.07);color:rgba(255,255,255,.65);font-family:'Nunito',sans-serif;font-weight:800;font-size:.65rem;cursor:pointer;transition:all .15s;}
+.tv-ctrl-btn.active{background:var(--sand);color:var(--dark);border-color:var(--sand);}
+.tv-header{text-align:center;margin-bottom:11px;}
+.tv-title{font-family:'Boogaloo',cursive;font-size:1.75rem;color:var(--sand);letter-spacing:2px;}
+.tv-subtitle{font-size:.74rem;font-weight:700;color:rgba(255,255,255,.35);margin-top:2px;letter-spacing:1px;}
+.tv-weather-bar{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:10px;font-size:.78rem;font-weight:700;color:rgba(255,255,255,.55);}
+.tv-toprow{display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:11px;flex-wrap:wrap;}
+.tv-stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:7px 13px;text-align:center;min-width:75px;}
+.tv-stat-n{font-family:'Boogaloo',cursive;font-size:1.45rem;line-height:1;}
+.tv-stat-l{font-size:.55rem;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.4px;margin-top:1px;}
+.tv-legend{display:flex;gap:10px;justify-content:center;margin-bottom:11px;flex-wrap:wrap;}
+.tv-legend-item{display:flex;align-items:center;gap:4px;font-size:.65rem;font-weight:700;color:rgba(255,255,255,.45);}
+.tv-legend-dot{width:8px;height:8px;border-radius:50%;}
+.tv-sections{display:flex;flex-direction:column;gap:11px;}
+.tv-section-title{font-family:'Boogaloo',cursive;font-size:1rem;color:var(--sky);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid rgba(72,202,228,.18);}
+.tv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(188px,1fr));gap:6px;}
+.tv-card{border-radius:9px;border:1.5px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);position:relative;overflow:hidden;transition:all .3s;}
+.tv-card-band{position:absolute;top:0;left:0;bottom:0;width:5px;}
+.tv-card-inner{padding:8px 8px 8px 12px;}
+.tv-card.tv-available{opacity:.28;}
+.tv-card.tv-reserved{background:rgba(245,158,11,.09);border-color:rgba(245,158,11,.28);animation:softpulse 2.8s ease-in-out infinite;}
+.tv-card.tv-checkedin{background:rgba(6,214,160,.09);border-color:rgba(6,214,160,.28);}
+.tv-card.tv-paid{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.35);}
+.tv-card.tv-flash{animation:tvFlash 1.5s ease!important;}
+@keyframes tvFlash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 3px rgba(255,209,102,.8),0 0 20px rgba(255,209,102,.4)}}
+@keyframes softpulse{0%,100%{opacity:1}50%{opacity:.55}}
+.tv-card-name{font-family:'Boogaloo',cursive;font-size:.9rem;letter-spacing:.4px;color:rgba(255,255,255,.88);margin-bottom:1px;}
+.tv-card-badge{font-size:.54rem;font-weight:900;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+.tv-card.tv-available .tv-card-badge{color:rgba(255,255,255,.2);}
+.tv-card.tv-reserved  .tv-card-badge{color:#fbbf24;}
+.tv-card.tv-checkedin .tv-card-badge{color:var(--mint);}
+.tv-card.tv-paid      .tv-card-badge{color:#86efac;}
+.tv-card-group{font-size:.74rem;font-weight:800;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;}
+.tv-card-detail{font-size:.63rem;font-weight:700;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:3px;flex-wrap:wrap;margin-bottom:2px;}
+.tv-srv-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 5px;border-radius:8px;font-size:.6rem;font-weight:800;}
+.tv-tags{display:flex;flex-wrap:wrap;gap:2px;}
+.tv-tag{font-size:.54rem;font-weight:800;padding:1px 4px;border-radius:6px;}
+.tv-tag-sp{background:rgba(253,224,71,.13);color:#fde047;border:1px solid rgba(253,224,71,.28);}
+.tv-tag-allday{background:rgba(196,181,253,.13);color:#c4b5fd;border:1px solid rgba(196,181,253,.28);}
+.tv-tag-cake{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.25);}
+.tv-tag-food{background:rgba(6,214,160,.1);color:#6ee7b7;border:1px solid rgba(6,214,160,.22);}
+.tv-tag-paid{background:rgba(34,197,94,.18);color:#86efac;border:1px solid rgba(34,197,94,.35);}
+.tv-tag-time{background:rgba(96,165,250,.12);color:#93c5fd;border:1px solid rgba(96,165,250,.25);}
+.tv-price{font-family:'Boogaloo',cursive;font-size:1rem;color:var(--sand);margin-bottom:1px;}
+.tv-cap{font-size:.58rem;color:rgba(255,255,255,.3);font-weight:700;}
+.last-updated{text-align:center;font-size:.58rem;color:rgba(255,255,255,.14);margin-top:12px;font-weight:600;}
+
+/* ═══════════════════════ REPORTS VIEW ═══════════════════════ */
+#reports-view{background:var(--page-bg);min-height:calc(100vh - 57px);padding:12px;}
+.rpt-header{font-family:'Boogaloo',cursive;font-size:1.4rem;color:var(--ocean);margin-bottom:12px;}
+.period-tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;}
+.period-tab{padding:5px 14px;border-radius:18px;border:2px solid var(--border);background:var(--panel-bg);font-family:'Nunito',sans-serif;font-weight:800;font-size:.74rem;cursor:pointer;color:var(--sub);transition:all .15s;}
+.period-tab.active{background:var(--ocean);color:white;border-color:var(--ocean);}
+.rpt-summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:14px;}
+.rpt-card{background:var(--panel-bg);border-radius:12px;padding:11px 12px;box-shadow:0 2px 10px rgba(0,0,0,.07);text-align:center;}
+.rpt-card-num{font-family:'Boogaloo',cursive;font-size:1.85rem;line-height:1;margin-bottom:2px;}
+.rpt-card-lbl{font-size:.64rem;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;}
+.cal-panel{background:var(--panel-bg);border-radius:13px;padding:12px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.cal-nav button{background:none;border:2px solid var(--border);border-radius:7px;padding:3px 9px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;font-size:.76rem;color:var(--ocean);}
+.cal-month-label{font-family:'Boogaloo',cursive;font-size:1.25rem;color:var(--text);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-dow{text-align:center;font-size:.57rem;font-weight:900;color:var(--sub);text-transform:uppercase;padding:2px 0 5px;}
+.cal-day{border-radius:8px;padding:4px 2px;min-height:48px;cursor:pointer;transition:all .15s;border:1.5px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--dim);}
+.cal-day:hover{border-color:var(--sky);background:var(--pale);}
+.cal-day.cal-today{border-color:var(--ocean);background:var(--pale);}
+.cal-day.cal-selected{background:var(--ocean);border-color:var(--ocean);}
+.cal-day.cal-other-month{opacity:.28;}
+.cal-day.cal-has-data{background:#edfaf5;}
+[data-theme="dark"] .cal-day.cal-has-data{background:rgba(6,214,160,.1);}
+.cal-day-num{font-weight:900;font-size:.76rem;color:var(--text);}
+.cal-day.cal-selected .cal-day-num,.cal-day.cal-selected .cal-day-count{color:white;}
+.cal-day-count{font-size:.55rem;font-weight:800;color:var(--ocean);}
+.cal-day.cal-selected .cal-day-count{color:rgba(255,255,255,.8);}
+.cal-day-bar-wrap{width:100%;padding:0 2px;}
+.cal-day-bar{height:3px;border-radius:2px;background:var(--mint);width:0%;transition:width .3s;}
+.chart-panel{background:var(--panel-bg);border-radius:13px;padding:12px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);}
+.chart-title{font-family:'Boogaloo',cursive;font-size:1.05rem;color:var(--ocean);margin-bottom:10px;}
+.chart-area{position:relative;height:160px;display:flex;align-items:flex-end;gap:3px;padding:16px 0 22px;}
+.chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;}
+.chart-bar{width:100%;border-radius:4px 4px 0 0;transition:height .4s ease;cursor:pointer;min-height:2px;}
+.chart-bar-am{background:linear-gradient(180deg,#48cae4,#0077b6);}
+.chart-bar-pm{background:linear-gradient(180deg,#ffd166,#f59e0b);}
+.chart-bar-total{background:linear-gradient(180deg,#06d6a0,#2a9d8f);}
+.chart-label{font-size:.54rem;font-weight:800;color:var(--sub);text-align:center;white-space:nowrap;}
+.chart-val{font-size:.57rem;font-weight:900;color:var(--text);position:absolute;top:-14px;left:50%;transform:translateX(-50%);white-space:nowrap;}
+.chart-legend{display:flex;gap:10px;margin-top:7px;flex-wrap:wrap;}
+.chart-legend-item{display:flex;align-items:center;gap:4px;font-size:.68rem;font-weight:800;color:var(--sub);}
+.chart-legend-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+.day-detail{background:var(--panel-bg);border-radius:13px;padding:12px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:12px;}
+.day-detail-title{font-family:'Boogaloo',cursive;font-size:1.1rem;color:var(--ocean);margin-bottom:9px;}
+.day-sess-row{display:flex;gap:8px;margin-bottom:9px;flex-wrap:wrap;}
+.day-sess-card{flex:1;min-width:110px;background:var(--dim);border-radius:9px;padding:9px 10px;border:1.5px solid var(--border);}
+.day-sess-card h4{font-family:'Boogaloo',cursive;font-size:.95rem;color:var(--ocean);margin-bottom:5px;}
+.day-sess-stat{font-size:.72rem;font-weight:700;color:var(--text);display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border);}
+.day-sess-stat:last-child{border-bottom:none;}
+.day-sess-stat span{font-weight:900;color:var(--ocean);}
+.day-group-item{display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--border);font-size:.72rem;font-weight:700;color:var(--text);}
+.day-group-item:last-child{border-bottom:none;}
+.day-group-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+/* Export + Print */
+.export-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.export-btn{padding:6px 14px;border-radius:8px;border:2px solid var(--border);background:var(--panel-bg);font-family:'Nunito',sans-serif;font-weight:800;font-size:.74rem;cursor:pointer;color:var(--ocean);display:flex;align-items:center;gap:5px;}
+.export-btn:hover{background:var(--pale);border-color:var(--sky);}
+
+@media print{
+  .topbar,.view-tabs,.filter-bar,.active-banner,.mgr-toolbar,.server-panel-wrap,.price-panel-wrap,.btn-edit,.card-actions,.btn-quick,.btn-remove-group,.search-wrap,.icon-btn,.sess-grp,.date-nav,.weather-chip,.countdown-chip{display:none!important;}
+  body{background:white!important;color:black!important;}
+  .cab-card,.fun-card{break-inside:avoid;box-shadow:none!important;border:1.5px solid #ccc!important;background:white!important;}
+  .card-band,.fun-card-band{display:none!important;}
+  .section{break-inside:avoid;}
+  #manager-view{display:block!important;padding:0!important;}
+}
+
+/* Tag for walk-in */
+.tag-walkin{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;}
+.tag-reservation{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;}
+/* TV tags for walk-in/reservation */
+.tv-tag-walkin{background:rgba(251,146,60,.13);color:#fb923c;border:1px solid rgba(251,146,60,.28);}
+.tv-tag-reservation{background:rgba(96,165,250,.12);color:#93c5fd;border:1px solid rgba(96,165,250,.25);}
+
+/* ═══════════════════════ WRISTBAND ═══════════════════════ */
+.wristband-picker{display:none;margin-top:7px;}
+.wristband-picker.open{display:block;}
+.wb-color-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.wb-color-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;border:2px solid transparent;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;font-size:.72rem;transition:all .15s;background:var(--dim);}
+.wb-color-btn .wb-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 1px rgba(0,0,0,.15);}
+.wb-color-btn.selected{border-color:var(--ocean);background:var(--pale);}
+.wb-meal-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+.wb-meal-btn{padding:4px 12px;border-radius:16px;border:2px solid var(--border);background:var(--dim);font-family:'Nunito',sans-serif;font-weight:800;font-size:.71rem;cursor:pointer;color:var(--text);transition:all .15s;}
+.wb-meal-btn.selected{border-color:var(--ocean);background:var(--ocean);color:white;}
+/* Wristband tags on cards */
+.tag-wb{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:12px;font-size:.65rem;font-weight:800;border:1.5px solid;}
+.tag-wb .wb-dot-sm{width:9px;height:9px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 1px rgba(0,0,0,.1);}
+/* TV wristband tag */
+.tv-tag-wb{display:inline-flex;align-items:center;gap:3px;padding:2px 5px;border-radius:9px;font-size:.58rem;font-weight:800;}
+/* Kitchen wristband badge */
+.k-badge-wb{display:inline-flex;align-items:center;gap:4px;}
+.k-badge-wb .wb-dot-k{width:10px;height:10px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 1px rgba(0,0,0,.15);}
+
+/* ═══════════════════════ PASSWORD OVERLAY ═══════════════════════ */
+#pw-overlay{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#012233 0%,#0077b6 65%,#48cae4 100%);display:flex;align-items:center;justify-content:center;}
+#pw-overlay.hidden{display:none;}
+#pw-box{background:var(--card-bg,#fff);border-radius:18px;padding:36px 32px 28px;width:min(340px,90vw);text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.35);}
+#pw-box h2{font-family:'Boogaloo',cursive;font-size:1.8rem;color:var(--ocean,#0077b6);margin-bottom:4px;}
+#pw-box p{font-size:.85rem;color:var(--sub,#889);margin-bottom:20px;}
+#pw-input{width:100%;padding:10px 14px;border:2px solid var(--border,#cde);border-radius:10px;font-family:'Nunito',sans-serif;font-size:1rem;background:var(--input-bg,#f6fbfe);color:var(--text,#023047);outline:none;margin-bottom:12px;transition:border-color .15s;}
+#pw-input:focus{border-color:var(--ocean,#0077b6);}
+#pw-submit{width:100%;padding:10px;border:none;border-radius:10px;background:var(--ocean,#0077b6);color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:1rem;cursor:pointer;transition:background .15s;}
+#pw-submit:hover{background:#005f8e;}
+#pw-error{color:var(--coral,#ef476f);font-size:.8rem;margin-top:8px;min-height:1.1em;}
+
+/* ═══════════════════════ HOURLY WEATHER STRIP ═══════════════════════ */
+.hourly-weather{display:flex;gap:6px;overflow-x:auto;padding:6px 0 4px;scrollbar-width:none;}
+.hourly-weather::-webkit-scrollbar{display:none;}
+.hw-item{flex-shrink:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:5px 8px;text-align:center;min-width:52px;}
+.hw-time{font-size:.58rem;font-weight:800;color:rgba(255,255,255,.5);text-transform:uppercase;}
+.hw-icon{font-size:1.1rem;line-height:1.3;}
+.hw-temp{font-size:.72rem;font-weight:900;color:white;}
+/* Light theme hourly strip */
+.hw-light .hw-item{background:rgba(0,119,182,.07);border-color:rgba(0,119,182,.15);}
+.hw-light .hw-time{color:var(--sub);}
+.hw-light .hw-temp{color:var(--text);}
+
+/* ═══════════════════════ LATE ARRIVALS ═══════════════════════ */
+.late-arr-item{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--dim);border-radius:8px;margin-bottom:4px;font-size:.76rem;font-weight:700;color:var(--text);flex-wrap:wrap;}
+.late-arr-item.arrived{background:#edfaf5;border:1px solid #34d399;}
+.late-arr-name{flex:1;font-weight:800;}
+.late-arr-type{font-size:.65rem;font-weight:700;color:var(--sub);background:var(--pale);border-radius:5px;padding:1px 6px;}
+.late-arr-ts{font-size:.62rem;color:var(--mint);font-weight:800;}
+.btn-mark-arrived{padding:3px 8px;border:none;border-radius:6px;background:#06d6a0;color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:.62rem;cursor:pointer;white-space:nowrap;}
+.btn-mark-arrived.done{background:#e2e8f0;color:#64748b;cursor:default;}
+.btn-rm-late{background:none;border:none;cursor:pointer;color:var(--coral);font-size:.9rem;font-weight:900;padding:0 2px;line-height:1;}
+.add-late-row{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
+.add-late-row input{flex:2;min-width:80px;padding:5px 8px;border:2px solid var(--border);border-radius:7px;font-family:'Nunito',sans-serif;font-size:.78rem;color:var(--text);background:var(--input-bg);}
+.add-late-row select{flex:2;min-width:90px;padding:5px 6px;border:2px solid var(--border);border-radius:7px;font-family:'Nunito',sans-serif;font-size:.76rem;color:var(--text);background:var(--input-bg);}
+.add-late-row input:focus,.add-late-row select:focus{outline:none;border-color:var(--ocean);}
+.btn-add-late{padding:5px 10px;background:var(--ocean);color:white;border:none;border-radius:7px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.72rem;cursor:pointer;white-space:nowrap;}
+
+/* Tag for server requested */
+.tag-req{background:#fdf4ff;color:#7e22ce;border:1px solid #e9d5ff;}
+.tag-late{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;}
+
+/* ═══════════════════════ MANAGER SETTINGS DROPDOWN ═══════════════════════ */
+.mgr-settings-wrap{background:var(--panel-bg);border-radius:14px;padding:11px 13px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.07);}
+.mgr-settings-hdr{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+.mgr-settings-hdr h3{font-family:'Boogaloo',cursive;font-size:1.05rem;color:var(--ocean);margin:0;}
+.mgr-settings-arrow{font-size:.8rem;color:var(--sub);transition:transform .2s;}
+.mgr-settings-arrow.open{transform:rotate(180deg);}
+.mgr-settings-body{display:none;margin-top:10px;}
+.mgr-settings-body.open{display:block;}
+.settings-section{margin-bottom:12px;}
+.settings-section-title{font-size:.68rem;font-weight:900;color:var(--mid);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid var(--border);}
+.ticket-price-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.tp-row{display:flex;flex-direction:column;gap:2px;}
+.tp-row label{font-size:.63rem;font-weight:800;color:#667;text-transform:uppercase;letter-spacing:.3px;}
+.tp-wrap{display:flex;align-items:center;gap:3px;background:var(--pale);border:2px solid var(--border);border-radius:7px;padding:4px 8px;}
+.tp-wrap span{font-weight:800;color:var(--sub);font-size:.84rem;}
+.tp-wrap input{border:none;background:transparent;font-family:'Nunito',sans-serif;font-size:.84rem;font-weight:800;color:var(--text);width:55px;}
+.tp-wrap input:focus{outline:none;}
+.threshold-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.threshold-item{display:flex;align-items:center;gap:4px;}
+.threshold-item label{font-size:.68rem;font-weight:800;color:var(--text);}
+.threshold-item input{width:52px;padding:4px 6px;border:2px solid var(--border);border-radius:6px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;color:var(--text);background:var(--input-bg);text-align:center;}
+.threshold-item input:focus{outline:none;border-color:var(--sky);}
+
+/* Peak indicator */
+.peak-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:.65rem;font-weight:800;}
+.peak-green{background:#dcfce7;color:#15803d;}
+.peak-yellow{background:#fef9c3;color:#854d0e;}
+.peak-red{background:#fee2e2;color:#991b1b;}
+[data-theme="dark"] .peak-green{background:rgba(6,214,160,.2);color:#6ee7b7;}
+[data-theme="dark"] .peak-yellow{background:rgba(245,158,11,.2);color:#fcd34d;}
+[data-theme="dark"] .peak-red{background:rgba(239,68,68,.2);color:#fca5a5;}
+
+/* ═══════════════════════ SERVER STATS ═══════════════════════ */
+.srv-stats-grid{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.srv-stat-card{background:var(--dim);border-radius:10px;padding:6px 10px;min-width:80px;flex:1;}
+.srv-stat-name{font-size:.62rem;font-weight:800;color:var(--text);margin-bottom:3px;display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.srv-stat-row{display:flex;justify-content:space-between;align-items:center;font-size:.63rem;font-weight:700;color:var(--sub);}
+.srv-stat-val{font-weight:900;color:var(--ocean);font-size:.78rem;}
+
+/* ═══════════════════════ HEADCOUNT VIEW ═══════════════════════ */
+#headcount-view{min-height:calc(100vh - 57px);display:none;flex-direction:column;align-items:center;justify-content:center;background:#012233;transition:background .2s;}
+#headcount-view.active{display:flex;}
+#headcount-view.hc-light{background:#f0f7fb;}
+.hc-counter-wrap{text-align:center;padding:20px;}
+.hc-title{font-family:'Boogaloo',cursive;font-size:1.8rem;color:var(--sand);margin-bottom:6px;letter-spacing:2px;}
+.hc-subtitle{font-size:.8rem;font-weight:700;color:rgba(255,255,255,.45);margin-bottom:30px;}
+#headcount-view.hc-light .hc-title{color:var(--ocean);}
+#headcount-view.hc-light .hc-subtitle{color:var(--sub);}
+.hc-number{font-family:'Boogaloo',cursive;font-size:clamp(5rem,20vw,10rem);color:white;line-height:1;margin-bottom:20px;transition:transform .1s;}
+#headcount-view.hc-light .hc-number{color:var(--ocean);}
+.hc-number.bump{transform:scale(1.12);}
+.hc-btns{display:flex;gap:16px;justify-content:center;margin-bottom:24px;}
+.hc-btn{width:80px;height:80px;border-radius:50%;border:none;font-size:2.5rem;font-weight:900;cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(0,0,0,.3);}
+.hc-btn:active{transform:scale(.9);}
+.hc-btn-minus{background:#ef476f;color:white;}
+.hc-btn-plus{background:#06d6a0;color:white;}
+.hc-btn-big{width:100px;height:100px;font-size:3.2rem;}
+.hc-reset{padding:8px 22px;border-radius:10px;border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:rgba(255,255,255,.65);font-family:'Nunito',sans-serif;font-weight:800;font-size:.8rem;cursor:pointer;transition:all .15s;}
+#headcount-view.hc-light .hc-reset{border-color:var(--border);background:var(--panel-bg);color:var(--ocean);}
+.hc-reset:hover{background:rgba(255,255,255,.2);}
+.hc-stats-row{display:flex;gap:14px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
+.hc-stat{text-align:center;}
+.hc-stat-num{font-family:'Boogaloo',cursive;font-size:1.6rem;color:var(--sky);}
+.hc-stat-lbl{font-size:.6rem;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;}
+#headcount-view.hc-light .hc-stat-num{color:var(--ocean);}
+#headcount-view.hc-light .hc-stat-lbl{color:var(--sub);}
+.hc-page-ctrl{position:absolute;top:65px;right:12px;display:flex;gap:6px;}
+.hc-page-btn{padding:5px 11px;border-radius:8px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);font-family:'Nunito',sans-serif;font-weight:800;font-size:.65rem;cursor:pointer;}
+#headcount-view.hc-light .hc-page-btn{border-color:var(--border);background:var(--panel-bg);color:var(--ocean);}
+
+/* ═══════════════════════ BREAK ROOM VIEW ═══════════════════════ */
+#breakroom-view{min-height:calc(100vh - 57px);display:none;flex-direction:column;align-items:center;justify-content:center;transition:background .2s;}
+#breakroom-view.active{display:flex;}
+#breakroom-view.br-light{background:#f0f7fb;}
+#breakroom-view.br-dark{background:#0d1117;}
+.br-indicator{border-radius:24px;padding:40px 60px;text-align:center;transition:all .3s;margin:20px;}
+.br-indicator.orders-on{background:linear-gradient(135deg,#06d6a0,#2a9d8f);box-shadow:0 0 60px rgba(6,214,160,.4);}
+.br-indicator.orders-off{background:linear-gradient(135deg,#ef476f,#c0392b);box-shadow:0 0 60px rgba(239,71,111,.4);}
+.br-status-icon{font-size:clamp(3rem,10vw,6rem);margin-bottom:10px;}
+.br-status-text{font-family:'Boogaloo',cursive;font-size:clamp(2rem,7vw,4rem);color:white;letter-spacing:2px;}
+.br-status-sub{font-size:.9rem;font-weight:700;color:rgba(255,255,255,.7);margin-top:6px;}
+.br-page-ctrl{position:absolute;top:65px;right:12px;display:flex;gap:6px;}
+.br-page-btn{padding:5px 11px;border-radius:8px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);font-family:'Nunito',sans-serif;font-weight:800;font-size:.65rem;cursor:pointer;}
+#breakroom-view.br-light .br-page-btn{border-color:var(--border);background:var(--panel-bg);color:var(--ocean);}
+.br-help-flash{margin-top:16px;padding:10px 24px;border-radius:12px;background:rgba(255,255,255,.15);font-size:.85rem;font-weight:800;color:white;display:none;}
+.br-help-flash.active{display:block;animation:helpFlash 1.2s ease-in-out infinite;}
+
+/* ═══════════════════════ KITCHEN ENHANCEMENTS ═══════════════════════ */
+#kitchen-view.k-light{background:#f0f7fb;}
+#kitchen-view.k-light .kitchen-title{color:var(--ocean);}
+#kitchen-view.k-light .kitchen-subtitle{color:var(--sub);}
+#kitchen-view.k-light .kitchen-section-title{color:var(--mid);border-bottom-color:var(--border);}
+#kitchen-view.k-light .k-card{background:var(--panel-bg);border-color:var(--border);}
+#kitchen-view.k-light .k-card.s-reserved{background:var(--bg-res);border-color:var(--brd-res);}
+#kitchen-view.k-light .k-card.s-checkedin{background:var(--bg-in);border-color:var(--brd-in);}
+#kitchen-view.k-light .k-card.s-paid{background:var(--paid-bg);border-color:var(--paid-brd);}
+#kitchen-view.k-light .k-name{color:var(--text);}
+#kitchen-view.k-light .k-group{color:var(--text);}
+#kitchen-view.k-light .k-row{color:var(--sub);}
+.kitchen-ctrl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.k-help-btn{padding:6px 14px;border-radius:9px;border:2px solid;font-family:'Nunito',sans-serif;font-weight:800;font-size:.74rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px;}
+.k-help-btn.off{border-color:#ef476f;color:#ef476f;background:rgba(239,71,111,.1);}
+.k-help-btn.on{border-color:#ef476f;background:#ef476f;color:white;animation:helpPulse .9s ease-in-out infinite;}
+.k-orders-btn{padding:6px 14px;border-radius:9px;border:2px solid;font-family:'Nunito',sans-serif;font-weight:800;font-size:.74rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px;}
+.k-orders-btn.on{border-color:#06d6a0;background:#06d6a0;color:white;}
+.k-orders-btn.off{border-color:#94a3b8;color:#94a3b8;background:rgba(148,163,184,.1);}
+.k-page-toggle{padding:5px 11px;border-radius:8px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);font-family:'Nunito',sans-serif;font-weight:800;font-size:.65rem;cursor:pointer;}
+#kitchen-view.k-light .k-page-toggle{border-color:var(--border);background:var(--panel-bg);color:var(--ocean);}
+@keyframes helpPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(239,71,111,.5)}50%{opacity:.85;box-shadow:0 0 0 8px rgba(239,71,111,0)}}
+@keyframes helpFlash{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.97)}}
+.k-summary-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.k-sum-pill{flex:1;min-width:80px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:7px 10px;text-align:center;}
+.k-sum-num{font-family:'Boogaloo',cursive;font-size:1.4rem;line-height:1;}
+.k-sum-lbl{font-size:.55rem;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+#kitchen-view.k-light .k-sum-pill{background:var(--panel-bg);border-color:var(--border);}
+#kitchen-view.k-light .k-sum-num{color:var(--text);}
+#kitchen-view.k-light .k-sum-lbl{color:var(--sub);}
+.k-allergy-panel{background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.3);border-radius:11px;padding:10px 12px;margin-bottom:12px;}
+.k-allergy-title{font-size:.68rem;font-weight:900;color:#fca5a5;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;display:flex;align-items:center;gap:5px;}
+.k-allergy-list{display:flex;flex-wrap:wrap;gap:5px;}
+.k-allergy-chip{background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.35);border-radius:8px;padding:3px 8px;font-size:.68rem;font-weight:800;color:#fca5a5;display:flex;align-items:center;gap:4px;}
+.k-allergy-chip .ac-cab{font-size:.58rem;opacity:.7;}
+#kitchen-view.k-light .k-allergy-panel{background:#fef2f2;border-color:#fecaca;}
+#kitchen-view.k-light .k-allergy-title{color:#991b1b;}
+#kitchen-view.k-light .k-allergy-chip{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
+/* Help flash on TV — per-alert banners */
+.tv-help-banners{margin-bottom:10px;}
+.tv-help-banner{background:rgba(239,71,111,.22);border:2px solid #ef476f;border-radius:11px;padding:10px 16px;text-align:center;display:none;margin-bottom:6px;animation:helpFlash 1s ease-in-out infinite;}
+.tv-help-banner.active{display:block;}
+.tv-help-text{font-family:'Boogaloo',cursive;font-size:1.3rem;color:#ff6b8a;letter-spacing:1px;}
+.tv-607-banner{background:rgba(120,53,15,.55);border:2px solid #f97316;border-radius:11px;padding:10px 16px;text-align:center;display:none;margin-bottom:6px;animation:helpFlash 1s ease-in-out infinite;}
+.tv-607-banner.active{display:block;}
+.tv-607-text{font-family:'Boogaloo',cursive;font-size:1.3rem;color:#fed7aa;letter-spacing:1px;}
+/* Kitchen hourly weather in light mode */
+#kitchen-view.k-light .hw-item{background:rgba(0,119,182,.07);border-color:rgba(0,119,182,.15);}
+#kitchen-view.k-light .hw-time{color:var(--sub);}
+#kitchen-view.k-light .hw-temp{color:var(--text);}
+/* ═══════════════════════ KITCHEN HELP ITEMS ═══════════════════════ */
+.k-help-items{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.k-help-item-btn{padding:7px 14px;border-radius:9px;border:2px solid;font-family:'Nunito',sans-serif;font-weight:800;font-size:.74rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px;}
+.k-help-item-btn.off{border-color:#94a3b8;color:#94a3b8;background:rgba(148,163,184,.1);}
+.k-help-item-btn.on{border-color:#ef476f;background:#ef476f;color:white;animation:helpPulse .9s ease-in-out infinite;}
+#kitchen-view.k-light .k-help-item-btn.off{border-color:#64748b;color:#64748b;background:rgba(100,116,139,.07);}
+/* ═══════════════════════ MANAGER KITCHEN ALERTS PANEL ═══════════════════════ */
+.mgr-alerts-panel{background:var(--panel-bg);border-radius:14px;padding:11px 13px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.07);display:none;}
+.mgr-alerts-panel.has-alerts{display:block;}
+.mgr-alerts-title{font-family:'Boogaloo',cursive;font-size:1rem;color:#ef476f;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.mgr-alert-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.mgr-alert-chip{padding:4px 10px;border-radius:8px;font-size:.72rem;font-weight:800;border:1.5px solid;display:flex;align-items:center;gap:4px;}
+.mgr-alert-chip-help{background:#fde8ea;color:#c0392b;border-color:#f9a8d4;animation:helpFlash 1.5s ease-in-out infinite;}
+.mgr-alert-chip-607{background:#fff7ed;color:#c2410c;border-color:#fed7aa;animation:helpFlash 1.5s ease-in-out infinite;}
+/* ═══════════════════════ 607 INDICATOR (MANAGER) ═══════════════════════ */
+.mgr-607-wrap{margin-top:10px;padding:10px 12px;background:var(--dim);border-radius:10px;border:1.5px solid var(--border);}
+.mgr-607-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;}
+.mgr-607-label{font-weight:800;font-size:.78rem;color:var(--text);}
+.mgr-607-loc-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.mgr-607-loc-label{font-size:.68rem;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;}
+.mgr-607-loc-select{padding:4px 8px;border:2px solid var(--border);border-radius:7px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;color:var(--text);background:var(--input-bg);}
+.mgr-607-loc-select:focus{outline:none;border-color:var(--sky);}
+/* ═══════════════════════ LIGHTNING BANNER ═══════════════════════ */
+.lightning-banner{display:none;position:sticky;top:54px;z-index:290;background:linear-gradient(90deg,#1e3a5f,#1e40af,#1e3a5f);border-bottom:3px solid #60a5fa;padding:8px 16px;text-align:center;animation:lightningFlash 2s ease-in-out infinite;}
+.lightning-banner.active{display:block;}
+.lightning-banner-text{font-family:'Boogaloo',cursive;font-size:1.1rem;color:#93c5fd;letter-spacing:1.5px;}
+@keyframes lightningFlash{0%,100%{background:linear-gradient(90deg,#1e3a5f,#1e40af,#1e3a5f);box-shadow:none}50%{background:linear-gradient(90deg,#1e40af,#3b82f6,#1e40af);box-shadow:0 0 20px rgba(59,130,246,.4)}}
+/* ═══════════════════════ BREAK ROOM HELP ALERTS ═══════════════════════ */
+.br-help-alerts{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:20px;width:100%;max-width:700px;padding:0 16px;}
+.br-help-alert{border-radius:20px;padding:22px 40px;text-align:center;display:none;width:100%;}
+.br-help-alert.active{display:block;animation:helpFlash 1.2s ease-in-out infinite;}
+.br-help-alert-text{font-family:'Boogaloo',cursive;font-size:clamp(1.4rem,4vw,2.2rem);color:white;letter-spacing:1.5px;}
+.br-help-alert-sub{font-size:.85rem;font-weight:700;color:rgba(255,255,255,.75);margin-top:4px;}
+.br-help-alert-kitchen{background:linear-gradient(135deg,#be123c,#ef476f);box-shadow:0 0 40px rgba(239,71,111,.4);}
+.br-help-alert-607{background:linear-gradient(135deg,#92400e,#f97316);box-shadow:0 0 40px rgba(249,115,22,.4);}
+/* Green capacity threshold */
+.peak-green-cfg{background:#dcfce7;color:#15803d;border:1.5px solid #86efac;}
+[data-theme="dark"] .peak-green-cfg{background:rgba(6,214,160,.15);color:#6ee7b7;border-color:rgba(6,214,160,.3);}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ PASSWORD OVERLAY ═══════════════ -->
+<div id="pw-overlay">
+  <div id="pw-box">
+    <h2>🌊 CowaBunga Bay</h2>
+    <p>Enter the staff password to access the management interface.</p>
+    <input id="pw-input" type="password" placeholder="Password" autocomplete="current-password">
+    <button id="pw-submit" onclick="checkPassword()">Unlock →</button>
+    <div id="pw-error"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ TOPBAR ═══════════════ -->
+<div class="topbar">
+  <div class="brand">🌊 CowaBunga Bay <small>Cabana Check-In · Draper</small></div>
+
+  <div class="sess-info">
+    <div class="date-nav">
+      <button onclick="changeDay(-1)">◀</button>
+      <div class="date-label" id="date-label">Today</div>
+      <button onclick="changeDay(1)">▶</button>
+    </div>
+    <div class="sess-grp">
+      <button class="sess-btn active" id="btn-am" onclick="setSession('AM')">☀️ AM<br><span style="font-size:.5rem;opacity:.7">10:30–2:00</span></button>
+      <button class="sess-btn"        id="btn-pm" onclick="setSession('PM')">🌅 PM<br><span style="font-size:.5rem;opacity:.7">2:30–6:00</span></button>
+    </div>
+    <div class="countdown-chip" id="countdown-chip">⏱ —</div>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-input" placeholder="Search groups…" oninput="doSearch(this.value)">
+  </div>
+
+  <div class="weather-chip" id="weather-chip" onclick="fetchWeather()" title="Click to refresh">🌤 —</div>
+
+  <div class="sync-chip" id="sync-chip" title="Supabase real-time sync status">⏳ Connecting…</div>
+
+  <div class="topbar-right">
+    <div class="view-tabs">
+      <button class="view-tab active" id="tab-manager"   onclick="switchView('manager')">📋 Manager</button>
+      <button class="view-tab"        id="tab-kitchen"   onclick="switchView('kitchen')">👨‍🍳 Kitchen</button>
+      <button class="view-tab"        id="tab-tv"        onclick="switchView('tv')">📺 Television Display</button>
+      <button class="view-tab"        id="tab-headcount" onclick="switchView('headcount')">👥 Headcount</button>
+      <button class="view-tab"        id="tab-breakroom" onclick="switchView('breakroom')">🍕 Break Room Orders</button>
+      <button class="view-tab"        id="tab-reports"   onclick="switchView('reports')">📊 Reports &amp; Analytics</button>
+    </div>
+    <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle dark/light mode">🌙</button>
+    <button class="icon-btn" onclick="undoLast()" id="undo-btn" title="Undo last clear" style="opacity:.4">↩️</button>
+    <div id="clock" style="font-family:'Boogaloo',cursive;font-size:1rem;color:white;white-space:nowrap;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ MANAGER VIEW ═══════════════ -->
+<div id="manager-view" class="view active">
+
+  <!-- Lightning Banner -->
+  <div class="lightning-banner" id="mgr-lightning-banner">
+    <div class="lightning-banner-text">⚡ LIGHTNING IN FORECAST — MONITOR CONDITIONS CLOSELY ⚡</div>
+  </div>
+
+  <!-- Kitchen Alerts Panel -->
+  <div class="mgr-alerts-panel" id="mgr-alerts-panel">
+    <div class="mgr-alerts-title">🚨 Active Kitchen Alerts</div>
+    <div class="mgr-alert-chips" id="mgr-alert-chips"></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="mgr-toolbar">
+    <button class="toolbar-btn" onclick="window.print()">🖨️ Print Summary</button>
+    <button class="toolbar-btn success" onclick="exportCSV()">📤 Export CSV</button>
+  </div>
+
+  <!-- Manager Settings Dropdown -->
+  <div class="mgr-settings-wrap" id="mgr-settings-wrap">
+    <div class="mgr-settings-hdr" onclick="toggleMgrSettings()">
+      <h3>⚙️ Manager Controls</h3>
+      <span class="mgr-settings-arrow" id="mgr-settings-arrow">▼</span>
+    </div>
+    <div class="mgr-settings-body" id="mgr-settings-body">
+      <!-- Cabana Pricing -->
+      <div class="settings-section">
+        <div class="settings-section-title">🏕️ Cabana Pricing</div>
+        <div class="price-grid" id="price-grid"></div>
+      </div>
+      <!-- Ticket Pricing -->
+      <div class="settings-section">
+        <div class="settings-section-title">🎟 Ticket Pricing</div>
+        <div class="ticket-price-grid" id="ticket-price-grid"></div>
+      </div>
+      <!-- Peak Thresholds -->
+      <div class="settings-section">
+        <div class="settings-section-title">📊 Park Capacity Thresholds (Occupancy %)</div>
+        <div class="threshold-row">
+          <div class="threshold-item">
+            <label>🟢 Green at</label>
+            <input type="number" id="thresh-green" min="1" max="99" placeholder="50" oninput="saveManagerSettings()">
+            <span style="font-size:.72rem;color:var(--sub);font-weight:700">%</span>
+          </div>
+          <div class="threshold-item">
+            <label>🟡 Yellow at</label>
+            <input type="number" id="thresh-first" min="1" max="99" placeholder="70" oninput="saveManagerSettings()">
+            <span style="font-size:.72rem;color:var(--sub);font-weight:700">%</span>
+          </div>
+          <div class="threshold-item">
+            <label>🔴 Red at</label>
+            <input type="number" id="thresh-second" min="1" max="100" placeholder="90" oninput="saveManagerSettings()">
+            <span style="font-size:.72rem;color:var(--sub);font-weight:700">%</span>
+          </div>
+        </div>
+      </div>
+      <!-- 607 Indicator -->
+      <div class="settings-section">
+        <div class="settings-section-title">💩 607 Alert Indicator</div>
+        <div class="mgr-607-wrap">
+          <div class="mgr-607-hdr">
+            <div class="mgr-607-label">💩 607 Alert Active</div>
+            <label class="toggle"><input type="checkbox" id="setting-607-on" onchange="toggle607()"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="mgr-607-loc-row">
+            <span class="mgr-607-loc-label">Location:</span>
+            <select class="mgr-607-loc-select" id="setting-607-location" onchange="set607Location(this.value)">
+              <option value="Kids Cove">Kids Cove</option>
+              <option value="Lazy River / Beach">Lazy River / Beach</option>
+              <option value="Structure">Structure</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <!-- Server Stats Toggle -->
+      <div class="settings-section" style="margin-bottom:0">
+        <div class="settings-section-title">👤 Display Options</div>
+        <div class="toggle-row">
+          <div><div class="toggle-lbl">Show Server Performance Stats</div></div>
+          <label class="toggle"><input type="checkbox" id="setting-show-srv-stats" onchange="saveManagerSettings();render()"><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Servers + Workload -->
+  <div class="panel server-panel-wrap">
+    <div class="panel-hdr">
+      <h3>👤 Servers on Duty</h3>
+      <span class="panel-hint" id="panel-hint">Tap name to filter · Color dot to change</span>
+    </div>
+    <div class="server-chips" id="server-chips"></div>
+    <div class="add-srv-row">
+      <input type="text" id="new-srv-input" placeholder="Add server name…" onkeydown="if(event.key==='Enter')addServer()">
+      <button class="btn-add" onclick="addServer()">+ Add</button>
+    </div>
+    <div class="workload-row" id="workload-row"></div>
+    <div id="srv-stats-wrap" style="display:none">
+      <div style="font-size:.63rem;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:9px;margin-bottom:4px;">📈 Server Performance</div>
+      <div class="srv-stats-grid" id="srv-stats-grid"></div>
+    </div>
+  </div>
+
+  <!-- Hourly Weather Strip (Manager) -->
+  <div class="panel" id="mgr-weather-panel" style="display:none">
+    <div class="panel-hdr"><h3>🌤 Hourly Forecast</h3><span class="panel-hint">Draper, UT</span></div>
+    <div class="hourly-weather hw-light" id="mgr-hourly-weather"></div>
+  </div>
+
+  <!-- Shift Notes -->
+  <div class="panel">
+    <h3>📝 Shift Notes</h3>
+    <textarea class="shift-notes-area" id="shift-notes" placeholder="Notes for this session (visible to manager only)…" oninput="saveShiftNotes()"></textarea>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <span class="fbar-lbl">Show:</span>
+    <button class="fbtn fbtn-all is-active" id="fb-all"       onclick="setStatusFilter('all')">All</button>
+    <button class="fbtn fbtn-available"     id="fb-available" onclick="setStatusFilter('available')">⬜ Available</button>
+    <button class="fbtn fbtn-reserved"      id="fb-reserved"  onclick="setStatusFilter('reserved')">🔶 Reserved</button>
+    <button class="fbtn fbtn-checkedin"     id="fb-checkedin" onclick="setStatusFilter('checkedin')">✅ Checked In</button>
+  </div>
+  <div class="active-banner" id="active-banner">
+    <span id="banner-text"></span>
+    <button onclick="clearAllFilters()">✕ Clear</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row"></div>
+
+  <!-- Sections -->
+  <div id="sections-container"></div>
+</div>
+
+<!-- ═══════════════ KITCHEN VIEW ═══════════════ -->
+<div id="kitchen-view" class="view">
+  <div class="kitchen-header">
+    <div>
+      <div class="kitchen-title">👨‍🍳 Kitchen Board</div>
+      <div class="kitchen-subtitle" id="kitchen-subtitle">—</div>
+    </div>
+    <div>
+      <div class="kitchen-ctrl-row">
+        <button class="k-orders-btn off" id="k-orders-btn" onclick="toggleBreakroomOrders()">🍕 Orders</button>
+        <button class="k-page-toggle" onclick="toggleKitchenDark()">🌙</button>
+      </div>
+      <div class="k-help-items" id="k-help-items">
+        <button class="k-help-item-btn off" id="k-help-pitchers"   onclick="toggleHelpItem('pitchers')">🫙 Pitchers</button>
+        <button class="k-help-item-btn off" id="k-help-pizzaTrays" onclick="toggleHelpItem('pizzaTrays')">🍕 Pizza Trays</button>
+        <button class="k-help-item-btn off" id="k-help-expediting" onclick="toggleHelpItem('expediting')">🚀 Expediting Help</button>
+        <button class="k-help-item-btn off" id="k-help-generalHelp" onclick="toggleHelpItem('generalHelp')">🙋 General Help</button>
+        <button class="k-help-item-btn off" id="k-help-dishes"     onclick="toggleHelpItem('dishes')">🍽 Dishes</button>
+      </div>
+    </div>
+  </div>
+  <!-- Guest summary bar -->
+  <div class="k-summary-bar" id="k-summary-bar"></div>
+  <!-- Allergy panel -->
+  <div class="k-allergy-panel" id="k-allergy-panel" style="display:none">
+    <div class="k-allergy-title">⚠️ Active Allergies</div>
+    <div class="k-allergy-list" id="k-allergy-list"></div>
+  </div>
+  <!-- Hourly weather strip -->
+  <div style="margin-bottom:10px;display:none" id="k-weather-wrap">
+    <div class="hourly-weather" id="k-hourly-weather"></div>
+  </div>
+  <div id="kitchen-container"></div>
+</div>
+
+<!-- ═══════════════ TV VIEW ═══════════════ -->
+<div id="tv-view" class="view">
+  <!-- Lightning Banner -->
+  <div class="lightning-banner" id="tv-lightning-banner">
+    <div class="lightning-banner-text">⚡ LIGHTNING IN FORECAST — POOL CLOSURE MAY BE REQUIRED ⚡</div>
+  </div>
+  <div class="tv-controls">
+    <button class="tv-ctrl-btn" id="tv-zoom-btn" onclick="toggleTVZoom()">🔍 Zoom</button>
+    <button class="tv-ctrl-btn" id="tv-scroll-btn" onclick="toggleTVScroll()">▶ Auto-Scroll</button>
+  </div>
+  <!-- Kitchen needs help banners (one per alert type) -->
+  <div class="tv-help-banners" id="tv-help-banners">
+    <div class="tv-help-banner" id="tv-help-pitchers">
+      <div class="tv-help-text">🫙 KITCHEN NEEDS PITCHERS 🫙</div>
+      <div style="font-size:.75rem;color:rgba(255,255,255,.6);font-weight:700;margin-top:3px;">Please bring pitchers to the kitchen</div>
+    </div>
+    <div class="tv-help-banner" id="tv-help-pizzaTrays">
+      <div class="tv-help-text">🍕 KITCHEN NEEDS PIZZA TRAYS 🍕</div>
+      <div style="font-size:.75rem;color:rgba(255,255,255,.6);font-weight:700;margin-top:3px;">Please locate and return pizza trays to kitchen</div>
+    </div>
+    <div class="tv-help-banner" id="tv-help-expediting">
+      <div class="tv-help-text">🚀 KITCHEN NEEDS EXPEDITING HELP 🚀</div>
+      <div style="font-size:.75rem;color:rgba(255,255,255,.6);font-weight:700;margin-top:3px;">Guest service: please assist with expediting / cashiering</div>
+    </div>
+    <div class="tv-help-banner" id="tv-help-generalHelp">
+      <div class="tv-help-text">🙋 KITCHEN NEEDS GENERAL HELP 🙋</div>
+      <div style="font-size:.75rem;color:rgba(255,255,255,.6);font-weight:700;margin-top:3px;">Please check in with kitchen staff</div>
+    </div>
+    <div class="tv-help-banner" id="tv-help-dishes">
+      <div class="tv-help-text">🍽 KITCHEN NEEDS DISHES 🍽</div>
+      <div style="font-size:.75rem;color:rgba(255,255,255,.6);font-weight:700;margin-top:3px;">Please bring dishes back to kitchen</div>
+    </div>
+    <div class="tv-607-banner" id="tv-help-607">
+      <div class="tv-607-text" id="tv-607-text">💩 607 ALERT 💩</div>
+      <div style="font-size:.75rem;color:rgba(253,186,116,.8);font-weight:700;margin-top:3px;" id="tv-607-sub">Notify maintenance immediately</div>
+    </div>
+  </div>
+  <div class="tv-header">
+    <div class="tv-title">🌊 Cowabunga Bay — Cabana Status</div>
+    <div class="tv-subtitle" id="tv-subtitle">—</div>
+  </div>
+  <div class="tv-weather-bar" id="tv-weather-bar"></div>
+  <!-- Hourly weather strip for TV -->
+  <div style="margin-bottom:10px;display:none" id="tv-hourly-wrap">
+    <div class="hourly-weather" id="tv-hourly-weather"></div>
+  </div>
+  <div class="tv-toprow"    id="tv-stats"></div>
+  <div class="tv-legend"    id="tv-legend"></div>
+  <div class="tv-sections"  id="tv-sections"></div>
+  <div class="last-updated" id="last-updated"></div>
+</div>
+
+<!-- ═══════════════ REPORTS VIEW ═══════════════ -->
+<div id="reports-view" class="view">
+  <div class="rpt-header">📊 Attendance Reports</div>
+  <div class="export-row">
+    <button class="export-btn" onclick="exportCSV()">📤 Export CSV</button>
+    <button class="export-btn" onclick="window.print()">🖨️ Print</button>
+  </div>
+  <div class="period-tabs">
+    <button class="period-tab active" id="pt-week"  onclick="setReportPeriod('week')">This Week</button>
+    <button class="period-tab"        id="pt-month" onclick="setReportPeriod('month')">This Month</button>
+    <button class="period-tab"        id="pt-all"   onclick="setReportPeriod('all')">All Time</button>
+  </div>
+  <div class="rpt-summary" id="rpt-summary"></div>
+  <div class="chart-panel">
+    <div class="chart-title" id="chart-title">Daily Attendance</div>
+    <div class="chart-area" id="chart-area"></div>
+    <div class="chart-legend">
+      <div class="chart-legend-item"><div class="chart-legend-dot chart-bar-am"></div>AM Guests</div>
+      <div class="chart-legend-item"><div class="chart-legend-dot chart-bar-pm"></div>PM Guests</div>
+      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:linear-gradient(#06d6a0,#2a9d8f)"></div>Park Total</div>
+    </div>
+  </div>
+  <div class="cal-panel">
+    <div class="cal-nav">
+      <button onclick="calChangeMonth(-1)">◀</button>
+      <div class="cal-month-label" id="cal-month-label">—</div>
+      <button onclick="calChangeMonth(1)">▶</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+  <div class="day-detail" id="day-detail" style="display:none">
+    <div class="day-detail-title" id="day-detail-title">—</div>
+    <div class="day-sess-row" id="day-sess-row"></div>
+    <div class="day-group-list" id="day-group-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ HEADCOUNT VIEW ═══════════════ -->
+<div id="headcount-view" class="view" style="position:relative;">
+  <div class="hc-page-ctrl">
+    <button class="hc-page-btn" onclick="toggleHeadcountDark()">🌙</button>
+  </div>
+  <div class="hc-counter-wrap">
+    <div class="hc-title">🌊 Park Headcount</div>
+    <div class="hc-subtitle" id="hc-subtitle">Gate Keeper · Real-Time Count</div>
+    <div class="hc-number" id="hc-display">0</div>
+    <div class="hc-btns">
+      <button class="hc-btn hc-btn-minus hc-btn-big" onclick="hcAdjust(-1)">−</button>
+      <button class="hc-btn hc-btn-plus hc-btn-big" onclick="hcAdjust(1)">+</button>
+    </div>
+    <button class="hc-reset" onclick="hcReset()">Reset to 0</button>
+    <div class="hc-stats-row" id="hc-stats-row"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ BREAK ROOM VIEW ═══════════════ -->
+<div id="breakroom-view" class="view br-dark" style="position:relative;">
+  <div class="br-page-ctrl">
+    <button class="br-page-btn" onclick="toggleBreakroomDark()">🌙</button>
+  </div>
+  <div class="br-indicator orders-off" id="br-indicator">
+    <div class="br-status-icon" id="br-status-icon">🚫</div>
+    <div class="br-status-text" id="br-status-text">ORDERS CLOSED</div>
+    <div class="br-status-sub" id="br-status-sub">Kitchen cannot take orders right now</div>
+  </div>
+  <!-- Large individual help alerts -->
+  <div class="br-help-alerts" id="br-help-alerts">
+    <div class="br-help-alert br-help-alert-kitchen" id="br-alert-pitchers">
+      <div class="br-help-alert-text">🫙 KITCHEN NEEDS PITCHERS 🫙</div>
+      <div class="br-help-alert-sub">Please bring pitchers to the kitchen</div>
+    </div>
+    <div class="br-help-alert br-help-alert-kitchen" id="br-alert-pizzaTrays">
+      <div class="br-help-alert-text">🍕 KITCHEN NEEDS PIZZA TRAYS 🍕</div>
+      <div class="br-help-alert-sub">Please locate and return pizza trays</div>
+    </div>
+    <div class="br-help-alert br-help-alert-kitchen" id="br-alert-expediting">
+      <div class="br-help-alert-text">🚀 KITCHEN NEEDS EXPEDITING HELP 🚀</div>
+      <div class="br-help-alert-sub">Please assist with expediting / cashiering</div>
+    </div>
+    <div class="br-help-alert br-help-alert-kitchen" id="br-alert-generalHelp">
+      <div class="br-help-alert-text">🙋 KITCHEN NEEDS GENERAL HELP 🙋</div>
+      <div class="br-help-alert-sub">Please check in with kitchen staff</div>
+    </div>
+    <div class="br-help-alert br-help-alert-kitchen" id="br-alert-dishes">
+      <div class="br-help-alert-text">🍽 KITCHEN NEEDS DISHES 🍽</div>
+      <div class="br-help-alert-sub">Please bring dishes back to the kitchen</div>
+    </div>
+    <div class="br-help-alert br-help-alert-607" id="br-alert-607">
+      <div class="br-help-alert-text" id="br-alert-607-text">💩 607 ALERT 💩</div>
+      <div class="br-help-alert-sub" id="br-alert-607-sub">Notify maintenance immediately</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL ═══════════════ -->
+<div class="overlay" id="overlay">
+ <div class="modal">
+  <div class="modal-title" id="modal-title">Edit Cabana</div>
+
+  <div class="field">
+    <label>Status</label>
+    <div class="stog-row">
+      <button class="stog stog-available" id="stog-available" onclick="setModalStatus('available')">⬜ Available</button>
+      <button class="stog stog-reserved"  id="stog-reserved"  onclick="setModalStatus('reserved')">🔶 Reserved</button>
+      <button class="stog stog-checkedin" id="stog-checkedin" onclick="setModalStatus('checkedin')">✅ Checked In</button>
+      <button class="stog stog-paid"      id="stog-paid"      onclick="setModalStatus('paid')">💚 Paid</button>
+    </div>
+  </div>
+
+  <div class="field"><label>Group Name</label><input type="text" id="f-group" placeholder="e.g. Smith Family" oninput="modalAutoSave()"></div>
+  <div class="field"><label>Headcount</label><select id="f-count"></select></div>
+  <div class="field"><label>Assigned Server</label><select id="f-server"></select></div>
+  <div class="toggle-row">
+    <div><div class="toggle-lbl">🔒 Requested by Guest</div><div class="toggle-sub">Prevents accidental server reassignment</div></div>
+    <label class="toggle"><input type="checkbox" id="f-srv-requested"><span class="toggle-slider"></span></label>
+  </div>
+  <div class="toggle-row">
+    <div><div class="toggle-lbl">🚶 Walk-In <span style="font-weight:600;font-size:.72rem;color:var(--sub)">(vs. reservation)</span></div><div class="toggle-sub">Guest arrived without a prior reservation</div></div>
+    <label class="toggle"><input type="checkbox" id="f-walkin-type"><span class="toggle-slider"></span></label>
+  </div>
+  <div class="field"><label>Event Type</label>
+    <select id="f-event">
+      <option value="">— None —</option>
+      <option>🎂 Birthday</option><option>👨‍👩‍👧‍👦 Family Reunion</option>
+      <option>🎓 Graduation</option><option>🏢 Corporate Event</option>
+      <option>💍 Anniversary</option><option>🎉 General Celebration</option>
+      <option>⛪ Church Group</option><option>🏫 School Group</option><option>Other</option>
+    </select>
+  </div>
+
+  <div class="field" id="f-food-row" style="display:none">
+    <label>Food Package</label>
+    <select id="f-food">
+      <option value="">No Food</option>
+      <option>Pizza Meal</option><option>Pizza Buffet</option>
+      <option>All-American</option><option>Fajita Fiesta</option><option>Surf and Turf</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>📝 Manager Notes</label>
+    <textarea id="f-notes" rows="2" placeholder="Internal notes — manager view only…" style="background:#fffbf0;border-color:#f0d060;resize:vertical;" oninput="modalAutoSave()"></textarea>
+  </div>
+
+  <!-- Photo attachment -->
+  <div class="modal-divider">📷 Photos (ID / Card)</div>
+  <div class="photo-area">
+    <div class="photo-thumbs" id="photo-thumbs"></div>
+    <div class="photo-btns">
+      <button class="btn-photo" onclick="document.getElementById('photo-camera').click()">📷 Camera</button>
+      <button class="btn-photo" onclick="document.getElementById('photo-upload').click()">🖼 Upload</button>
+    </div>
+    <input type="file" id="photo-camera" accept="image/*" capture="environment" style="display:none" onchange="handlePhotos(this)">
+    <input type="file" id="photo-upload" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
+  </div>
+
+  <div class="modal-divider">Options</div>
+  <div class="toggle-row">
+    <div><div class="toggle-lbl">🌟 Season Pass Holders</div></div>
+    <label class="toggle"><input type="checkbox" id="f-sp"><span class="toggle-slider"></span></label>
+  </div>
+  <div class="toggle-row">
+    <div><div class="toggle-lbl">☀️ All-Day Booking</div><div class="toggle-sub">Mirrors to both AM & PM sessions</div></div>
+    <label class="toggle"><input type="checkbox" id="f-allday"><span class="toggle-slider"></span></label>
+  </div>
+
+  <div class="modal-divider">🪬 Wristband</div>
+  <div class="toggle-row">
+    <div><div class="toggle-lbl">Has Wristband</div></div>
+    <label class="toggle"><input type="checkbox" id="f-has-wristband" onchange="updateWristbandUI()"><span class="toggle-slider"></span></label>
+  </div>
+  <div class="wristband-picker" id="wristband-picker">
+    <div style="font-size:.68rem;font-weight:800;color:var(--sub);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px;">Color</div>
+    <div class="wb-color-row" id="wb-color-row">
+      <button class="wb-color-btn" data-color="white"  onclick="selectWBColor('white')"><div class="wb-dot" style="background:#fff;box-shadow:0 0 0 2px #d1d5db;"></div>White</button>
+      <button class="wb-color-btn" data-color="teal"   onclick="selectWBColor('teal')"><div class="wb-dot" style="background:#14b8a6;"></div>Teal</button>
+      <button class="wb-color-btn" data-color="green"  onclick="selectWBColor('green')"><div class="wb-dot" style="background:#22c55e;"></div>Green</button>
+      <button class="wb-color-btn" data-color="red"    onclick="selectWBColor('red')"><div class="wb-dot" style="background:#ef4444;"></div>Red</button>
+      <button class="wb-color-btn" data-color="orange" onclick="selectWBColor('orange')"><div class="wb-dot" style="background:#f97316;"></div>Orange</button>
+      <button class="wb-color-btn" data-color="yellow" onclick="selectWBColor('yellow')"><div class="wb-dot" style="background:#eab308;"></div>Yellow</button>
+      <button class="wb-color-btn" data-color="meal-dessert" onclick="selectWBColor('meal-dessert')"><div class="wb-dot" style="background:linear-gradient(135deg,#f97316,#a855f7);"></div>Meal / Dessert</button>
+    </div>
+    <div id="wb-meal-section" style="display:none">
+      <div style="font-size:.68rem;font-weight:800;color:var(--sub);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px;">Includes</div>
+      <div class="wb-meal-row">
+        <button class="wb-meal-btn" data-meal="meal"    onclick="selectWBMeal('meal')">🍽 Meal</button>
+        <button class="wb-meal-btn" data-meal="dessert" onclick="selectWBMeal('dessert')">🍰 Dessert</button>
+        <button class="wb-meal-btn" data-meal="both"    onclick="selectWBMeal('both')">🍽🍰 Both</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-divider">🎂 Dessert</div>
+  <div class="toggle-row"><div><div class="toggle-lbl">Cake</div></div>
+    <label class="toggle"><input type="checkbox" id="f-cake" onchange="updateDessertUI()"><span class="toggle-slider"></span></label>
+  </div>
+  <div class="toggle-row"><div><div class="toggle-lbl">Cupcakes</div></div>
+    <label class="toggle"><input type="checkbox" id="f-cupcakes"><span class="toggle-slider"></span></label>
+  </div>
+  <div id="cake-extras" style="display:none">
+    <div class="toggle-row"><div><div class="toggle-lbl">🧊 Cake in Walk-In Fridge</div></div>
+      <label class="toggle"><input type="checkbox" id="f-walkin"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row"><div><div class="toggle-lbl">🕯️ Needs Candles</div></div>
+      <label class="toggle"><input type="checkbox" id="f-candles"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row"><div><div class="toggle-lbl">🔥 Needs Lighter</div></div>
+      <label class="toggle"><input type="checkbox" id="f-lighter"><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+
+  <div class="modal-divider">🚨 Allergies</div>
+  <div class="toggle-row"><div><div class="toggle-lbl">Group has allergies</div></div>
+    <label class="toggle"><input type="checkbox" id="f-has-allergy" onchange="updateAllergyUI()"><span class="toggle-slider"></span></label>
+  </div>
+  <div id="allergy-picker" style="display:none">
+    <div class="field" style="margin-top:6px">
+      <label>Allergy Type(s)</label>
+      <select id="f-allergy" multiple style="height:100px">
+        <option>🥜 Peanuts</option><option>🌰 Tree Nuts</option>
+        <option>🌾 Gluten / Wheat</option><option>🥛 Dairy / Lactose</option>
+        <option>🥚 Eggs</option><option>🐟 Fish</option>
+        <option>🦐 Shellfish</option><option>🫘 Soy</option>
+        <option>Other — See Notes</option>
+      </select>
+      <div style="font-size:.64rem;color:#9aacba;margin-top:2px;">Hold Ctrl/Cmd for multiple</div>
+    </div>
+  </div>
+
+  <div id="ticket-section">
+    <div class="modal-divider">🎟 Tickets Needed</div>
+    <div class="ticket-grid">
+      <div class="ticket-field"><label>Over 48"</label><input type="number" id="tk-over48" min="0" placeholder="0"></div>
+      <div class="ticket-field"><label>Under 48"</label><input type="number" id="tk-under48" min="0" placeholder="0"></div>
+      <div class="ticket-field"><label>Senior</label><input type="number" id="tk-senior" min="0" placeholder="0"></div>
+      <div class="ticket-field"><label>Spectator</label><input type="number" id="tk-spectator" min="0" placeholder="0"></div>
+    </div>
+  </div>
+
+  <div class="modal-divider">🔗 Link to Group Reservation</div>
+  <div style="font-size:.68rem;color:#9aacba;margin-bottom:4px;">Select other cabanas reserved together</div>
+  <div class="link-row" id="link-options"></div>
+
+  <div class="modal-divider">⏳ Late Arrivals</div>
+  <div style="font-size:.68rem;color:#9aacba;margin-bottom:6px;">Track guests joining later — mark arrived when they check in</div>
+  <div id="late-arrivals-list"></div>
+  <div class="add-late-row">
+    <input type="text" id="late-name-input" placeholder="Name…">
+    <select id="late-type-input">
+      <option value='Over 48"'>Over 48"</option>
+      <option value='Under 48"'>Under 48"</option>
+      <option value="Senior">Senior</option>
+      <option value="Spectator">Spectator</option>
+    </select>
+    <button class="btn-add-late" onclick="addLateArrival()">+ Add</button>
+  </div>
+
+  <div class="modal-actions">
+    <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    <button class="btn-clear"  onclick="clearCabana()">🗑 Clear</button>
+    <button class="btn-save"   onclick="saveModal()">💾 Save</button>
+  </div>
+ </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// PASSWORD PROTECTION
+// ═══════════════════════════════════════
+const PW_CORRECT='Davehuishishot!';
+(function(){
+  const overlay=document.getElementById('pw-overlay');
+  const input=document.getElementById('pw-input');
+  if(sessionStorage.getItem('cb_auth')==='1'){overlay.classList.add('hidden');return;}
+  input.addEventListener('keydown',function(e){if(e.key==='Enter')checkPassword();});
+  setTimeout(function(){input.focus();},50);
+})();
+function checkPassword(){
+  const input=document.getElementById('pw-input');
+  const error=document.getElementById('pw-error');
+  if(input.value===PW_CORRECT){
+    sessionStorage.setItem('cb_auth','1');
+    document.getElementById('pw-overlay').classList.add('hidden');
+    error.textContent='';
+  }else{
+    error.textContent='Incorrect password. Please try again.';
+    input.value='';
+    input.focus();
+  }
+}
+
+// ═══════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════
+const SECTIONS=[
+  {id:'beach',    label:'🏖️ Beach Cabanas', count:6, prefix:'Beach',    cap:'6–8 guests', isFun:false},
+  {id:'vip',      label:'⭐ VIP Cabanas',    count:9, prefix:'VIP',      cap:'6–8 guests', isFun:false},
+  {id:'tiki',     label:'🌴 Tiki Lounge',    count:7, prefix:'Tiki',     cap:'2–5 guests', isFun:false},
+  {id:'bungalow', label:'🌺 Beach Bungalow', count:1, prefix:'Bungalow', cap:'10+ guests', isFun:false},
+  {id:'picnic',   label:'🧺 Picnic Cabanas', count:3, prefix:'Picnic',   cap:'6–8 guests', isFun:false},
+  {id:'funbrella',label:'☂️ Funbrellas / Groups',count:5,prefix:'Funbrella',cap:'Varies',  isFun:true},
+  {id:'noarea',   label:'📋 No Area Groups', count:0, prefix:'Group',    cap:'Varies',     isFun:true,isNoArea:true},
+];
+const PRESET_COLORS=['#e63946','#f4a261','#2a9d8f','#7209b7','#3a86ff','#fb8500','#c77dff','#023e8a','#588157','#e9c46a','#00b4d8','#d62828','#06d6a0','#ef476f','#ffd166','#118ab2'];
+const WB_COLORS={
+  white:      {css:'#ffffff',border:'#d1d5db',label:'White'},
+  teal:       {css:'#14b8a6',border:'#0d9488',label:'Teal'},
+  green:      {css:'#22c55e',border:'#16a34a',label:'Green'},
+  red:        {css:'#ef4444',border:'#dc2626',label:'Red'},
+  orange:     {css:'#f97316',border:'#ea580c',label:'Orange'},
+  yellow:     {css:'#eab308',border:'#ca8a04',label:'Yellow'},
+  'meal-dessert':{css:'linear-gradient(135deg,#f97316,#a855f7)',border:'#a855f7',label:'Meal/Dessert'},
+};
+const SESSION_TIMES={AM:{start:'10:30',end:'14:00'},PM:{start:'14:30',end:'18:00'}};
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let currentDate=todayKey(),currentSession='AM';
+let servers=[],prices={};
+let serverFilter=null,statusFilter='all';
+let modalId=null,modalStatus='available',isFunModal=false;
+let undoStack=null;
+let tvScrollInterval=null,tvZoomOn=false;
+let reportPeriod='week',calYear=new Date().getFullYear(),calMonth=new Date().getMonth(),selectedCalDay=null;
+let weatherData=null,hourlyWeatherData=[];
+let modalPhotos=[];
+let customLabels={};
+let helpNeeded=false,ordersOn=false;
+let helpItems={pitchers:false,pizzaTrays:false,expediting:false,generalHelp:false,dishes:false};
+let alert607={on:false,location:'Kids Cove'};
+let lightningActive=false;
+let kitchenDark=false,breakroomDark=false,headcountDark=false;
+let managerSettings={peakThresholds:{green:50,first:70,second:90},ticketPrices:{over48:25,under48:20,senior:15,spectator:10},showServerStats:false};
+let modalLateArrivals=[];
+
+// ═══════════════════════════════════════
+// STORAGE HELPERS
+// ═══════════════════════════════════════
+function todayKey(){const d=new Date();return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;}
+function p2(n){return String(n).padStart(2,'0');}
+function stateKey(date,sess){return `cb_${date||currentDate}_${sess||currentSession}`;}
+function ls(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lss(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+function loadSession(date,sess){try{const r=ls(stateKey(date,sess));return r?JSON.parse(r):{};}catch(e){return{};}}
+function saveSession(data,date,sess){lss(stateKey(date,sess),JSON.stringify(data));sbSyncSession(data,date,sess);}
+function saveSessionLocal(data,date,sess){lss(stateKey(date,sess),JSON.stringify(data));}
+function loadServers(){try{const r=ls('cb_servers_v2');return r?JSON.parse(r):[{name:'Alex',color:'#e63946'},{name:'Jordan',color:'#3a86ff'},{name:'Taylor',color:'#2a9d8f'},{name:'Morgan',color:'#7209b7'}];}catch(e){return[];}}
+function saveServers(){lss('cb_servers_v2',JSON.stringify(servers));sbSyncServers();}
+function loadPrices(){try{const r=ls('cb_prices');return r?JSON.parse(r):{};}catch(e){return{};}}
+function savePrices(){lss('cb_prices',JSON.stringify(prices));sbSyncPrices();}
+function loadCustomLabels(){try{const r=ls('cb_labels');return r?JSON.parse(r):{};}catch(e){return{};}}
+function saveCustomLabels(){lss('cb_labels',JSON.stringify(customLabels));}
+function loadManagerSettings(){try{const r=ls('cb_mgrsettings');return r?{...managerSettings,...JSON.parse(r)}:managerSettings;}catch(e){return managerSettings;}}
+function saveManagerSettings(){
+  const tg=parseInt(document.getElementById('thresh-green')?.value)||managerSettings.peakThresholds.green;
+  const t1=parseInt(document.getElementById('thresh-first')?.value)||managerSettings.peakThresholds.first;
+  const t2=parseInt(document.getElementById('thresh-second')?.value)||managerSettings.peakThresholds.second;
+  const ss=document.getElementById('setting-show-srv-stats')?.checked??managerSettings.showServerStats;
+  managerSettings.peakThresholds={green:tg,first:t1,second:t2};
+  managerSettings.showServerStats=ss;
+  lss('cb_mgrsettings',JSON.stringify(managerSettings));
+  sbSyncKitchenState();
+}
+function loadSharedState(){
+  try{const r=ls('cb_shared_state');if(r){const d=JSON.parse(r);helpNeeded=!!d.helpNeeded;ordersOn=!!d.ordersOn;if(d.helpItems)helpItems={...helpItems,...d.helpItems};if(d.alert607)alert607={...alert607,...d.alert607};}}catch(e){}
+  helpNeeded=Object.values(helpItems).some(Boolean);
+}
+function saveSharedState(){
+  helpNeeded=Object.values(helpItems).some(Boolean);
+  lss('cb_shared_state',JSON.stringify({helpNeeded,ordersOn,helpItems,alert607}));
+  sbSyncKitchenState();
+}
+async function sbSyncKitchenState(){
+  if(!sb||!sbOnline) return;
+  try{
+    await sb.from('app_state').upsert({key:'kitchen',helpNeeded,ordersOn,updated_at:new Date().toISOString()},{onConflict:'key'});
+  }catch(e){console.warn('sbSyncKitchenState:',e);}
+}
+
+// ═══════════════════════════════════════
+// DEBOUNCE UTILITY
+// ═══════════════════════════════════════
+function debounce(fn,delay){let t;return function(...a){clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),delay);};}
+
+// ═══════════════════════════════════════
+// SUPABASE REAL-TIME SYNC
+// ═══════════════════════════════════════
+const SB_URL='https://vxbzslecnpxoevdthtyb.supabase.co';
+const SB_KEY='sb_publishable_rtm9ovX3xo9emn2di0wPFQ_pg4I6hzI';
+let sb=null,sbOnline=navigator.onLine,sbQueue=[];
+
+function setSyncChip(status){
+  const chip=document.getElementById('sync-chip');
+  if(!chip) return;
+  const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  if(status==='online'){chip.textContent=`🟢 Live · ${t}`;chip.style.cssText='background:rgba(6,214,160,.18);color:#06d6a0;';}
+  else if(status==='syncing'){chip.textContent='🔄 Syncing…';chip.style.cssText='background:rgba(255,209,102,.18);color:#ffd166;';}
+  else if(status==='offline'){chip.textContent='🔴 Offline';chip.style.cssText='background:rgba(239,71,111,.18);color:#ef476f;';}
+  else{chip.textContent='⏳ Connecting…';chip.style.cssText='';}
+}
+
+// Deduplicated enqueue: keeps only the latest entry per type/key to avoid redundant syncs
+function sbEnqueue(item){
+  if(item.t==='session'){
+    const key=`${item.d.date}|${item.d.sess}`;
+    sbQueue=sbQueue.filter(q=>!(q.t==='session'&&`${q.d.date}|${q.d.sess}`===key));
+  }else if(item.t==='servers'||item.t==='prices'){
+    sbQueue=sbQueue.filter(q=>q.t!==item.t);
+  }else if(item.t==='notes'){
+    const key=`${item.d.date}|${item.d.sess}`;
+    sbQueue=sbQueue.filter(q=>!(q.t==='notes'&&`${q.d.date}|${q.d.sess}`===key));
+  }
+  sbQueue.push(item);
+}
+
+async function sbSyncSession(data,date,sess){
+  if(!sb||!sbOnline){sbEnqueue({t:'session',d:{data,date,sess}});return;}
+  const d=date||currentDate,s=sess||currentSession;
+  setSyncChip('syncing');
+  try{
+    const rows=Object.entries(data).map(([cid,cdata])=>({date:d,session:s,cabana_id:cid,data:cdata,updated_at:new Date().toISOString()}));
+    if(rows.length) await sb.from('cabana_sessions').upsert(rows,{onConflict:'date,session,cabana_id'});
+    setSyncChip('online');
+  }catch(e){console.warn('sbSyncSession:',e);setSyncChip('offline');}
+}
+
+async function sbSyncServers(){
+  if(!sb||!sbOnline){sbEnqueue({t:'servers'});return;}
+  try{
+    // Upsert current servers by name, then delete any that were removed
+    if(servers.length){
+      await sb.from('servers_list').upsert(
+        servers.map(s=>({name:s.name,color:s.color,updated_at:new Date().toISOString()})),
+        {onConflict:'name'}
+      );
+    }
+    const {data:existing}=await sb.from('servers_list').select('id,name');
+    if(existing&&existing.length){
+      const current=new Set(servers.map(s=>s.name));
+      const toDelete=existing.filter(r=>!current.has(r.name)).map(r=>r.id);
+      if(toDelete.length) await sb.from('servers_list').delete().in('id',toDelete);
+    }
+    setSyncChip('online');
+  }catch(e){console.warn('sbSyncServers:',e);}
+}
+
+async function sbSyncPrices(){
+  if(!sb||!sbOnline){sbEnqueue({t:'prices'});return;}
+  try{
+    const rows=Object.entries(prices).map(([sid,p])=>({section_id:sid,price:parseFloat(p)||0,updated_at:new Date().toISOString()}));
+    if(rows.length) await sb.from('prices_config').upsert(rows,{onConflict:'section_id'});
+    setSyncChip('online');
+  }catch(e){console.warn('sbSyncPrices:',e);}
+}
+
+async function sbSyncShiftNotes(date,sess,notes){
+  if(!sb||!sbOnline){sbEnqueue({t:'notes',d:{date,sess,notes}});return;}
+  try{
+    await sb.from('shift_notes').upsert({date,session:sess,notes:notes||'',updated_at:new Date().toISOString()},{onConflict:'date,session'});
+    setSyncChip('online');
+  }catch(e){console.warn('sbSyncShiftNotes:',e);}
+}
+
+// Debounced sync — waits 1 second after the last call before hitting Supabase
+const sbSyncSessionDebounced=debounce(sbSyncSession,1000);
+const sbSyncShiftNotesDebounced=debounce(sbSyncShiftNotes,1000);
+
+async function sbDrainQueue(){
+  if(!sb||!sbOnline||!sbQueue.length) return;
+  const q=[...sbQueue];sbQueue=[];
+  for(const item of q){
+    if(item.t==='session') await sbSyncSession(item.d.data,item.d.date,item.d.sess);
+    else if(item.t==='servers') await sbSyncServers();
+    else if(item.t==='prices') await sbSyncPrices();
+    else if(item.t==='notes') await sbSyncShiftNotes(item.d.date,item.d.sess,item.d.notes);
+  }
+}
+
+async function sbInitialLoad(){
+  if(!sb) return;
+  try{
+    const {data:srvData}=await sb.from('servers_list').select('*').order('updated_at');
+    if(srvData&&srvData.length){servers=srvData.map(r=>({name:r.name,color:r.color}));lss('cb_servers_v2',JSON.stringify(servers));}
+    const {data:priceData}=await sb.from('prices_config').select('*');
+    if(priceData&&priceData.length){prices={};priceData.forEach(r=>{prices[r.section_id]=r.price;});lss('cb_prices',JSON.stringify(prices));}
+    const today=todayKey();
+    const {data:sessData}=await sb.from('cabana_sessions').select('*').eq('date',today);
+    if(sessData&&sessData.length){
+      const bySession={};
+      sessData.forEach(r=>{if(!bySession[r.session])bySession[r.session]={};bySession[r.session][r.cabana_id]=r.data;});
+      Object.entries(bySession).forEach(([sess,data])=>saveSessionLocal(data,today,sess));
+    }
+    const {data:notesData}=await sb.from('shift_notes').select('*').eq('date',today);
+    if(notesData&&notesData.length) notesData.forEach(r=>lss(`cb_shiftnotes_${today}_${r.session}`,r.notes||''));
+      try{
+        const {data:stateData}=await sb.from('app_state').select('*').eq('key','kitchen');
+        if(stateData&&stateData.length){const s=stateData[0];helpNeeded=!!s.helpNeeded;ordersOn=!!s.ordersOn;updateHelpUI();updateOrdersUI();}
+      }catch(e){}
+    render();loadShiftNotes();
+  }catch(e){console.warn('sbInitialLoad:',e);}
+}
+
+function sbSetupRealtime(){
+  if(!sb) return;
+  sb.channel('cb-realtime')
+    .on('postgres_changes',{event:'*',schema:'public',table:'cabana_sessions'},payload=>{
+      const row=payload.new;if(!row||payload.eventType==='DELETE') return;
+      const saved=loadSession(row.date,row.session);
+      saved[row.cabana_id]=row.data;
+      saveSessionLocal(saved,row.date,row.session);
+      if(row.date===currentDate&&row.session===currentSession){
+        render();
+        // Delay flash to allow render cycle to complete before animating
+        setTimeout(()=>flashCard(row.cabana_id),100);
+      }
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'shift_notes'},payload=>{
+      const row=payload.new;if(!row) return;
+      lss(`cb_shiftnotes_${row.date}_${row.session}`,row.notes||'');
+      if(row.date===currentDate&&row.session===currentSession) loadShiftNotes();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'servers_list'},async ()=>{
+      const {data}=await sb.from('servers_list').select('*').order('updated_at');
+      if(data&&data.length){servers=data.map(r=>({name:r.name,color:r.color}));lss('cb_servers_v2',JSON.stringify(servers));render();}
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'prices_config'},async ()=>{
+      const {data}=await sb.from('prices_config').select('*');
+      if(data&&data.length){prices={};data.forEach(r=>{prices[r.section_id]=r.price;});lss('cb_prices',JSON.stringify(prices));render();}
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'app_state'},async payload=>{
+      const row=payload.new;if(!row) return;
+      if(row.key==='kitchen'){
+        ordersOn=!!row.ordersOn;
+        // helpNeeded from remote is a summary; local helpItems take precedence if set
+        if(!Object.values(helpItems).some(Boolean)) helpNeeded=!!row.helpNeeded;
+        saveSharedState();updateHelpUI();updateOrdersUI();
+      }
+    })
+    .subscribe(status=>{
+      if(status==='SUBSCRIBED') setSyncChip('online');
+      else if(status==='CLOSED'||status==='CHANNEL_ERROR') setSyncChip('offline');
+    });
+}
+
+function initSupabase(){
+  try{
+    if(!window.supabase){setSyncChip('offline');return;}
+    sb=window.supabase.createClient(SB_URL,SB_KEY);
+    sbSetupRealtime();
+    sbInitialLoad();
+  }catch(e){console.warn('initSupabase:',e);setSyncChip('offline');}
+}
+
+window.addEventListener('online',()=>{sbOnline=true;setSyncChip('online');sbDrainQueue();});
+window.addEventListener('offline',()=>{sbOnline=false;setSyncChip('offline');});
+
+// ═══════════════════════════════════════
+function blankCab(id,section,label){
+  return {id,section,label,group:'',count:'',server:'',status:'available',
+    eventType:'',seasonPass:false,allDay:false,linkedGroup:'',
+    cake:false,cupcakes:false,walkin:false,candles:false,lighter:false,
+    hasAllergy:false,allergies:[],tickets:{over48:0,under48:0,senior:0,spectator:0},
+    food:'',notes:'',checkedInTime:'',photos:[],lateArrivals:[],serverRequested:false,walkIn:false,
+    hasWristband:false,wristbandColor:'',wristbandMealType:''};
+}
+
+function getCabanas(date,sess){
+  const saved=loadSession(date,sess);
+  const out={};
+  SECTIONS.forEach(sec=>{
+    if(sec.isNoArea){
+      Object.keys(saved).filter(k=>k.startsWith('noarea_')).forEach(id=>{
+        const lbl=customLabels[id]||saved[id].label||id;
+        out[id]={...blankCab(id,'noarea',lbl),...saved[id],label:lbl};
+      });
+    } else {
+      for(let i=1;i<=sec.count;i++){
+        const id=`${sec.id}_${i}`;
+        const defaultLbl=sec.count===1?sec.prefix:`${sec.prefix} ${i}`;
+        const lbl=customLabels[id]||defaultLbl;
+        out[id]={...blankCab(id,sec.id,lbl),...(saved[id]||{}),label:lbl};
+      }
+    }
+  });
+  return out;
+}
+function saveCabana(id,data,date,sess){const s=loadSession(date,sess);s[id]=data;saveSession(s,date,sess);}
+function serverColor(name){const s=servers.find(x=>x.name===name);return s?s.color:'#94a3b8';}
+function lighten(hex){try{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return `rgb(${Math.round(r+(255-r)*.82)},${Math.round(g+(255-g)*.82)},${Math.round(b+(255-b)*.82)})`;}catch(e){return '#eee';}}
+
+// ═══════════════════════════════════════
+// DATE / SESSION
+// ═══════════════════════════════════════
+function changeDay(d){const dt=new Date(currentDate+'T12:00:00');dt.setDate(dt.getDate()+d);currentDate=dt.toISOString().slice(0,10);updateDateLabel();render();}
+function setSession(s){currentSession=s;document.getElementById('btn-am').classList.toggle('active',s==='AM');document.getElementById('btn-pm').classList.toggle('active',s==='PM');loadShiftNotes();render();}
+function updateDateLabel(){const d=new Date(currentDate+'T12:00:00');document.getElementById('date-label').textContent=currentDate===todayKey()?'Today':d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+
+// ═══════════════════════════════════════
+// COUNTDOWN
+// ═══════════════════════════════════════
+function updateCountdown(){
+  const chip=document.getElementById('countdown-chip');
+  if(!chip) return;
+  const now=new Date();
+  const todayStr=todayKey();
+  if(currentDate!==todayStr){chip.textContent='';return;}
+  const t=SESSION_TIMES[currentSession];
+  const [eh,em]=t.end.split(':').map(Number);
+  const end=new Date();end.setHours(eh,em,0,0);
+  const diff=end-now;
+  if(diff<=0){chip.textContent='⏱ Session ended';chip.className='countdown-chip urgent';return;}
+  const h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000);
+  chip.textContent=h>0?`⏱ ${h}h ${m}m left`:`⏱ ${m}m left`;
+  chip.className='countdown-chip'+(diff<1800000?' urgent':'');
+}
+
+// ═══════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════
+function toggleTheme(){
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  document.documentElement.setAttribute('data-theme',isDark?'light':'dark');
+  document.getElementById('theme-btn').textContent=isDark?'🌙':'☀️';
+  lss('cb_theme',isDark?'light':'dark');
+}
+
+// ═══════════════════════════════════════
+// WEATHER
+// ═══════════════════════════════════════
+function weatherCodeIcon(code){
+  if(code<=1) return '☀️';
+  if(code<=3) return '⛅';
+  if(code<=48) return '🌫';
+  if(code<=67) return '🌧';
+  if(code<=77) return '❄️';
+  if(code<=82) return '🌦';
+  return '🌩';
+}
+
+async function fetchWeather(){
+  const chip=document.getElementById('weather-chip');
+  const tvBar=document.getElementById('tv-weather-bar');
+  chip.textContent='🌤 …';
+  try{
+    // Draper UT lat/lon — fetch current + hourly (2 days to ensure 10 hours even late in day)
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=40.5246&longitude=-111.8638&current_weather=true&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=2&timezone=America%2FDenver');
+    const d=await r.json();
+    const cw=d.current_weather;
+    const icon=weatherCodeIcon(cw.weathercode);
+    const txt=`${icon} ${Math.round(cw.temperature)}°F`;
+    weatherData=txt;
+    chip.textContent=txt;
+
+    // Build hourly data — up to 10 hours ahead
+    hourlyWeatherData=[];
+    lightningActive=false;
+    if(d.hourly&&d.hourly.time){
+      const now=new Date();
+      d.hourly.time.forEach((t,i)=>{
+        const dt=new Date(t);
+        if(dt<now-3600000) return; // skip past hours (allow 1hr back)
+        if(hourlyWeatherData.length>=10) return; // limit to 10 hours
+        const wcode=d.hourly.weathercode[i];
+        if(wcode>=95) lightningActive=true; // thunderstorm codes 95-99
+        hourlyWeatherData.push({
+          time:dt.toLocaleTimeString([],{hour:'numeric',hour12:true}),
+          icon:weatherCodeIcon(wcode),
+          temp:Math.round(d.hourly.temperature_2m[i])
+        });
+      });
+    }
+
+    // Update TV current weather bar
+    if(tvBar) tvBar.innerHTML=`<span>${txt}</span><span style="opacity:.5">Draper, UT</span><span>${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>`;
+
+    // Render hourly strips on all views
+    renderHourlyWeather();
+    // Update lightning banners
+    updateLightningBanner();
+  }catch(e){chip.textContent='🌤 —';}
+}
+
+function updateLightningBanner(){
+  const mgrBanner=document.getElementById('mgr-lightning-banner');
+  const tvBanner=document.getElementById('tv-lightning-banner');
+  if(mgrBanner) mgrBanner.classList.toggle('active',lightningActive);
+  if(tvBanner) tvBanner.classList.toggle('active',lightningActive);
+}
+
+function renderHourlyWeather(){
+  if(!hourlyWeatherData.length) return;
+  const html=hourlyWeatherData.map(h=>`<div class="hw-item"><div class="hw-time">${h.time}</div><div class="hw-icon">${h.icon}</div><div class="hw-temp">${h.temp}°</div></div>`).join('');
+  const mgrEl=document.getElementById('mgr-hourly-weather');
+  const mgrPanel=document.getElementById('mgr-weather-panel');
+  if(mgrEl){mgrEl.innerHTML=html;if(mgrPanel)mgrPanel.style.display='block';}
+  const kEl=document.getElementById('k-hourly-weather');
+  const kWrap=document.getElementById('k-weather-wrap');
+  if(kEl){kEl.innerHTML=html;if(kWrap)kWrap.style.display='block';}
+  const tvEl=document.getElementById('tv-hourly-weather');
+  const tvWrap=document.getElementById('tv-hourly-wrap');
+  if(tvEl){tvEl.innerHTML=html;if(tvWrap)tvWrap.style.display='block';}
+}
+
+// ═══════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════
+function doSearch(q){
+  const term=q.trim().toLowerCase();
+  document.querySelectorAll('.cab-card,.fun-card').forEach(el=>{
+    if(!term){el.classList.remove('search-hidden');return;}
+    const name=(el.dataset.group||'').toLowerCase();
+    el.classList.toggle('search-hidden',!name.includes(term));
+  });
+}
+
+// ═══════════════════════════════════════
+// SHIFT NOTES
+// ═══════════════════════════════════════
+function saveShiftNotes(){
+  const v=document.getElementById('shift-notes').value;
+  lss(`cb_shiftnotes_${currentDate}_${currentSession}`,v);
+  sbSyncShiftNotesDebounced(currentDate,currentSession,v);
+}
+function loadShiftNotes(){
+  const el=document.getElementById('shift-notes');
+  if(el) el.value=ls(`cb_shiftnotes_${currentDate}_${currentSession}`)||'';
+}
+
+// ═══════════════════════════════════════
+// FILTERS
+// ═══════════════════════════════════════
+function setServerFilter(name){serverFilter=serverFilter===name?null:name;statusFilter='all';updateFilterUI();render();}
+function setStatusFilter(v){statusFilter=v;serverFilter=null;updateFilterUI();render();}
+function clearAllFilters(){serverFilter=null;statusFilter='all';updateFilterUI();render();}
+function updateFilterUI(){
+  ['all','available','reserved','checkedin'].forEach(v=>document.getElementById(`fb-${v}`).classList.toggle('is-active',v===statusFilter&&!serverFilter));
+  document.querySelectorAll('.srv-chip').forEach(el=>el.classList.toggle('is-filtered',el.dataset.server===serverFilter));
+  const banner=document.getElementById('active-banner');
+  const hint=document.getElementById('panel-hint');
+  if(serverFilter){banner.classList.add('show');document.getElementById('banner-text').textContent=`Showing: ${serverFilter}`;hint.textContent='Tap again to clear';}
+  else if(statusFilter!=='all'){banner.classList.add('show');const L={available:'Available',reserved:'Reserved',checkedin:'Checked In'};document.getElementById('banner-text').textContent=`Showing: ${L[statusFilter]}`;}
+  else{banner.classList.remove('show');hint.textContent='Tap name to filter · Color dot to change';}
+}
+
+// ═══════════════════════════════════════
+// UNDO
+// ═══════════════════════════════════════
+function pushUndo(id,data){undoStack={id,data,date:currentDate,sess:currentSession};document.getElementById('undo-btn').style.opacity='1';}
+function undoLast(){
+  if(!undoStack) return;
+  saveCabana(undoStack.id,undoStack.data,undoStack.date,undoStack.sess);
+  undoStack=null;
+  document.getElementById('undo-btn').style.opacity='.4';
+  render();
+}
+
+// ═══════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════
+function render(){
+  const cabs=getCabanas();
+  renderStats(cabs);
+  renderServerChips();
+  renderWorkload(cabs);
+  renderSections(cabs);
+  renderKitchen(cabs);
+  renderTV(cabs);
+  if(document.getElementById('headcount-view')?.classList.contains('active')) renderHeadcount();
+}
+
+function renderStats(cabs){
+  const v=Object.values(cabs);
+  const ci=v.filter(c=>c.status==='checkedin'||c.status==='paid').length;
+  const res=v.filter(c=>c.status==='reserved').length;
+  const pd=v.filter(c=>c.status==='paid').length;
+  const cabHC=v.filter(c=>c.status==='checkedin'||c.status==='paid').reduce((s,c)=>s+(+c.count||0),0);
+  const parkKey=`cb_parkcount_${currentDate}_${currentSession}`;
+  let parkCount=0;try{parkCount=parseInt(ls(parkKey)||'0');}catch(e){}
+
+  // Compute total cabanas (non-noarea only for occupancy) and occupancy %
+  const totalCabs=v.filter(c=>c.section!=='noarea').length||1;
+  const activeCabs=v.filter(c=>c.section!=='noarea'&&c.status!=='available').length;
+  const occPct=Math.round((activeCabs/totalCabs)*100);
+  const tg=managerSettings.peakThresholds.green||50;
+  const t1=managerSettings.peakThresholds.first||70;
+  const t2=managerSettings.peakThresholds.second||90;
+  let peakCls='peak-green',peakEmoji='🟢';
+  if(occPct>=t2){peakCls='peak-red';peakEmoji='🔴';}
+  else if(occPct>=t1){peakCls='peak-yellow';peakEmoji='🟡';}
+  else if(occPct<tg){peakCls='peak-green';peakEmoji='🟢';}
+
+  document.getElementById('stats-row').innerHTML=`
+    <div class="stat-pill"><div class="stat-icon">🏕️</div><div><div class="stat-num">${v.length}</div><div class="stat-lbl">Cabanas</div></div></div>
+    <div class="stat-pill"><div class="stat-icon">✅</div><div><div class="stat-num" style="color:var(--mint)">${ci}</div><div class="stat-lbl">In/Paid</div></div></div>
+    <div class="stat-pill"><div class="stat-icon">🔶</div><div><div class="stat-num" style="color:#d97706">${res}</div><div class="stat-lbl">Reserved</div></div></div>
+    <div class="stat-pill"><div class="stat-icon">👥</div><div><div class="stat-num" style="color:var(--ocean)">${cabHC}</div><div class="stat-lbl">Cab Guests</div></div></div>
+    <div class="stat-pill"><div><div class="stat-lbl" style="margin-bottom:3px;">Occupancy</div><div><span class="peak-pill ${peakCls}">${peakEmoji} ${occPct}%</span></div></div></div>
+    <div class="stat-pill" style="min-width:160px;cursor:default;">
+      <div class="stat-icon">🌊</div>
+      <div style="flex:1">
+        <div style="font-size:.57rem;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Park Headcount</div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <button onclick="adjustParkCount(-1)" style="width:21px;height:21px;border-radius:50%;border:2px solid var(--border);background:var(--pale);color:var(--ocean);font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:900;flex-shrink:0;line-height:1;">−</button>
+          <input type="number" id="park-count-input" value="${parkCount}" min="0"
+            style="width:55px;border:2px solid var(--border);border-radius:6px;padding:2px 4px;font-family:'Nunito',sans-serif;font-weight:900;font-size:1rem;color:var(--text);text-align:center;background:var(--input-bg);"
+            oninput="saveParkCount(this.value)" onchange="saveParkCount(this.value)">
+          <button onclick="adjustParkCount(1)" style="width:21px;height:21px;border-radius:50%;border:2px solid var(--border);background:var(--pale);color:var(--ocean);font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:900;flex-shrink:0;line-height:1;">+</button>
+        </div>
+      </div>
+    </div>`;
+}
+function saveParkCount(val){lss(`cb_parkcount_${currentDate}_${currentSession}`,Math.max(0,parseInt(val)||0));}
+function adjustParkCount(d){
+  const k=`cb_parkcount_${currentDate}_${currentSession}`;
+  const n=Math.max(0,(parseInt(ls(k)||'0'))+d);
+  lss(k,n);
+  renderStats(getCabanas());
+  if(document.getElementById('headcount-view').classList.contains('active')) renderHeadcount();
+}
+
+function renderServerChips(){
+  document.getElementById('server-chips').innerHTML=servers.map(s=>{
+    const isFilt=serverFilter===s.name;
+    const lgt=lighten(s.color);
+    return `<div class="srv-chip${isFilt?' is-filtered':''}" style="background:${lgt};color:${s.color};border-color:${s.color}" data-server="${s.name}">
+      <div class="srv-chip-color" onclick="event.stopPropagation()" title="Change color">
+        <input type="color" value="${s.color}" oninput="updateServerColor('${s.name}',this.value)" onchange="saveServers();render()">
+        <span class="cdot" style="background:${s.color}"></span>
+      </div>
+      <span class="srv-chip-name" onclick="setServerFilter('${s.name}')">${s.name}</span>
+      <button class="rm" style="color:${s.color}" onclick="removeServer('${s.name}',event)">×</button>
+    </div>`;
+  }).join('')||'<span style="color:#aac;font-size:.76rem;font-style:italic">No servers added yet</span>';
+}
+function updateServerColor(name,color){const s=servers.find(x=>x.name===name);if(s){s.color=color;renderServerChips();}}
+
+function renderWorkload(cabs){
+  const row=document.getElementById('workload-row');
+  if(!servers.length){row.innerHTML='';return;}
+  const maxCabs=Math.max(...servers.map(s=>Object.values(cabs).filter(c=>c.server===s.name&&c.status!=='available').length),1);
+  row.innerHTML=servers.map(s=>{
+    const assigned=Object.values(cabs).filter(c=>c.server===s.name&&c.status!=='available');
+    const guests=assigned.reduce((t,c)=>t+(+c.count||0),0);
+    const pct=Math.round((assigned.length/maxCabs)*100);
+    return `<div class="workload-item">
+      <div class="workload-name"><div class="wd" style="background:${s.color}"></div>${s.name}</div>
+      <div class="workload-bar-bg"><div class="workload-bar-fill" style="width:${pct}%;background:${s.color}"></div></div>
+      <div class="workload-nums">${assigned.length} cabana${assigned.length!==1?'s':''} · ${guests} guests</div>
+    </div>`;
+  }).join('');
+
+  // Server performance quick stats
+  const statsWrap=document.getElementById('srv-stats-wrap');
+  const statsGrid=document.getElementById('srv-stats-grid');
+  if(statsWrap&&statsGrid){
+    statsWrap.style.display=managerSettings.showServerStats&&servers.length?'block':'none';
+    if(managerSettings.showServerStats){
+      statsGrid.innerHTML=servers.map(s=>{
+        const assigned=Object.values(cabs).filter(c=>c.server===s.name&&c.status!=='available');
+        const guests=assigned.reduce((t,c)=>t+(+c.count||0),0);
+        return `<div class="srv-stat-card">
+          <div class="srv-stat-name"><div class="wd" style="background:${s.color};width:8px;height:8px;border-radius:50%;flex-shrink:0"></div>${s.name}</div>
+          <div class="srv-stat-row"><span>Cabanas</span><span class="srv-stat-val">${assigned.length}</span></div>
+          <div class="srv-stat-row"><span>Guests</span><span class="srv-stat-val">${guests}</span></div>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+function renderPriceGrid(){
+  const el=document.getElementById('price-grid');
+  if(!el) return;
+  el.innerHTML=SECTIONS.map(sec=>
+    `<div class="price-row">
+      <label>${sec.label.replace(/\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu,'').trim()}</label>
+      <div class="price-wrap"><span>$</span>
+        <input type="number" min="0" step="1" placeholder="—" value="${prices[sec.id]||''}"
+          oninput="prices['${sec.id}']=this.value;savePrices();renderTV();">
+      </div>
+      <div style="font-size:.6rem;color:var(--sub);margin-top:1px;">${sec.cap}</div>
+    </div>`
+  ).join('');
+}
+
+function renderTicketPriceGrid(){
+  const el=document.getElementById('ticket-price-grid');
+  if(!el) return;
+  const tp=managerSettings.ticketPrices;
+  el.innerHTML=`
+    <div class="tp-row"><label>Over 48"</label><div class="tp-wrap"><span>$</span><input type="number" min="0" step=".50" value="${tp.over48||''}" oninput="managerSettings.ticketPrices.over48=+this.value;saveManagerSettings()"></div></div>
+    <div class="tp-row"><label>Under 48"</label><div class="tp-wrap"><span>$</span><input type="number" min="0" step=".50" value="${tp.under48||''}" oninput="managerSettings.ticketPrices.under48=+this.value;saveManagerSettings()"></div></div>
+    <div class="tp-row"><label>Senior</label><div class="tp-wrap"><span>$</span><input type="number" min="0" step=".50" value="${tp.senior||''}" oninput="managerSettings.ticketPrices.senior=+this.value;saveManagerSettings()"></div></div>
+    <div class="tp-row"><label>Spectator</label><div class="tp-wrap"><span>$</span><input type="number" min="0" step=".50" value="${tp.spectator||''}" oninput="managerSettings.ticketPrices.spectator=+this.value;saveManagerSettings()"></div></div>`;
+}
+
+function renderManagerSettingsUI(){
+  const tgEl=document.getElementById('thresh-green');
+  const t1El=document.getElementById('thresh-first');
+  const t2El=document.getElementById('thresh-second');
+  const ssEl=document.getElementById('setting-show-srv-stats');
+  if(tgEl) tgEl.value=managerSettings.peakThresholds.green||50;
+  if(t1El) t1El.value=managerSettings.peakThresholds.first;
+  if(t2El) t2El.value=managerSettings.peakThresholds.second;
+  if(ssEl) ssEl.checked=!!managerSettings.showServerStats;
+  renderTicketPriceGrid();
+  // Sync 607 toggle UI
+  const chk607=document.getElementById('setting-607-on');
+  if(chk607) chk607.checked=!!alert607.on;
+  const loc607=document.getElementById('setting-607-location');
+  if(loc607) loc607.value=alert607.location||'Kids Cove';
+}
+
+function toggleMgrSettings(){
+  const body=document.getElementById('mgr-settings-body');
+  const arrow=document.getElementById('mgr-settings-arrow');
+  if(!body||!arrow) return;
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  arrow.classList.toggle('open',!isOpen);
+  if(!isOpen){renderPriceGrid();renderManagerSettingsUI();}
+}
+
+function renderSections(cabs){
+  const container=document.getElementById('sections-container');
+  container.innerHTML='';
+  SECTIONS.forEach(sec=>{
+    let secCabs=[];
+    if(sec.isNoArea){secCabs=Object.values(cabs).filter(c=>c.section==='noarea');}
+    else{for(let i=1;i<=sec.count;i++) secCabs.push(cabs[`${sec.id}_${i}`]);}
+
+    // Waitlist
+    const wlKey=`cb_waitlist_${currentDate}_${currentSession}_${sec.id}`;
+    let wl=[];try{wl=JSON.parse(ls(wlKey)||'[]');}catch(e){}
+
+    const cards=secCabs.map(c=>buildManagerCard(c,sec)).join('');
+    const ci=secCabs.filter(c=>c.status==='checkedin'||c.status==='paid').length;
+    const res=secCabs.filter(c=>c.status==='reserved').length;
+    const av=secCabs.filter(c=>c.status==='available').length;
+
+    const addBtn=sec.isNoArea?`<button onclick="addNoAreaGroup()" style="margin-left:auto;padding:3px 10px;background:var(--ocean);color:white;border:none;border-radius:7px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.68rem;cursor:pointer;">+ Add Group</button>`:'';
+
+    const wlHtml=`<div class="waitlist-section">
+      <div class="waitlist-title">⏳ Waitlist (${wl.length})</div>
+      ${wl.map((name,i)=>`<div class="waitlist-item"><div class="wl-num">${i+1}</div><div class="wl-name">${name}</div><button class="wl-rm" onclick="removeWaitlist('${sec.id}',${i})">×</button></div>`).join('')}
+      <div class="add-waitlist-row">
+        <input type="text" id="wl-input-${sec.id}" placeholder="Add to waitlist…" onkeydown="if(event.key==='Enter')addWaitlist('${sec.id}')">
+        <button class="btn-add-waitlist" onclick="addWaitlist('${sec.id}')">+ Wait</button>
+      </div>
+    </div>`;
+
+    container.innerHTML+=`
+      <div class="section">
+        <div class="section-hdr">
+          <div class="section-title" id="sec-title-${sec.id}" ondblclick="renameSection('${sec.id}')">${sec.label}</div>
+          <div class="sec-badges">
+            ${ci?`<span class="sec-badge scb-in">✅ ${ci}</span>`:''}
+            ${res?`<span class="sec-badge scb-res">🔶 ${res}</span>`:''}
+            ${av?`<span class="sec-badge scb-avl">⬜ ${av}</span>`:''}
+          </div>
+          ${addBtn}
+          <div class="section-line"></div>
+        </div>
+        <div class="${sec.isFun?'fun-grid':'cabana-grid'}">${cards}${sec.isNoArea&&!secCabs.length?'<div style="color:var(--sub);font-size:.78rem;font-style:italic;font-weight:700;padding:6px 4px;">No groups — tap + Add Group</div>':''}</div>
+        ${wlHtml}
+      </div>`;
+  });
+}
+
+function buildManagerCard(c,sec){
+  const clr=c.server?serverColor(c.server):'';
+  const lgt=clr?lighten(clr):'';
+  let dimmed=false;
+  if(serverFilter&&c.server!==serverFilter) dimmed=true;
+  if(statusFilter!=='all'&&c.status!==statusFilter&&!(statusFilter==='checkedin'&&c.status==='paid')) dimmed=true;
+  const bMap={available:['sb-available','⬜ Available'],reserved:['sb-reserved','🔶 Reserved'],checkedin:['sb-checkedin','✅ Checked In'],paid:['sb-paid','💚 Paid']};
+  const [bcls,btxt]=bMap[c.status]||bMap.available;
+  const tk=c.tickets||{};
+  const tkT=(+tk.over48||0)+(+tk.under48||0)+(+tk.senior||0)+(+tk.spectator||0);
+  const price=prices[sec.id]?`$${prices[sec.id]}`:'';
+  const allergyList=(c.allergies||[]).map(a=>a.replace(/[^\w\s&\/\-]/gu,'')).join(', ');
+  const showQuickCheckin=c.status==='reserved';
+  const showDup=c.status!=='available';
+  const timeTag=c.checkedInTime?`<span class="tag tag-time">🕐 ${c.checkedInTime}</span>`:'';
+  const photoTag=(c.photos||[]).length?`<span class="tag tag-photo">📷 ${c.photos.length}</span>`:'';
+  const lateArr=c.lateArrivals||[];
+  const lateArrived=lateArr.filter(la=>la.arrivedAt).length;
+  const latePending=lateArr.filter(la=>!la.arrivedAt).length;
+  const lateTag=lateArr.length?`<span class="tag tag-late">⏳ ${lateArrived}/${lateArr.length} arrived</span>`:'';
+  const reqTag=c.serverRequested?`<span class="tag tag-req">🔒 Requested</span>`:'';
+  const wbTag=buildWBTagHtml(c);
+  const bookTypeTag=(c.status==='checkedin'||c.status==='paid'||c.status==='reserved')
+    ?(c.walkIn?`<span class="tag tag-walkin">🚶 Walk-In</span>`:`<span class="tag tag-reservation">📅 Reservation</span>`)
+    :'';
+
+  const inner=`
+    <div class="cab-top">
+      <div class="cab-name" ondblclick="renameCard('${c.id}',event)" title="Double-click to rename">${c.label}</div>
+      <span class="status-badge ${bcls}">${btxt}</span>
+    </div>
+    <div class="cab-group${c.group?'':' no-grp'}">${c.group?'👥 '+c.group:'No group assigned'}</div>
+    <div class="cab-tags">
+      ${c.server&&clr?`<span class="tag tag-server" style="background:${clr};font-size:.68rem;padding:2px 7px">● ${c.server}</span>`:''}
+      ${reqTag}${bookTypeTag}${wbTag}
+      ${c.count?`<span class="tag tag-cap">👥 ${c.count}</span>`:''}
+      ${timeTag}${photoTag}${lateTag}
+      ${c.seasonPass?`<span class="tag tag-sp">🌟 SP</span>`:''}
+      ${c.allDay?`<span class="tag tag-allday">All Day</span>`:''}
+      ${c.eventType?`<span class="tag tag-event">${c.eventType}</span>`:''}
+      ${c.linkedGroup?`<span class="tag tag-linked">🔗</span>`:''}
+      ${tkT?`<span class="tag tag-tickets">🎟 ${tkT}</span>`:''}
+      ${c.cake?`<span class="tag tag-cake">🎂${c.walkin?' 🧊':''}</span>`:''}
+      ${c.cupcakes?`<span class="tag tag-cake">🧁</span>`:''}
+      ${c.hasAllergy?`<span class="tag tag-allergy">⚠️ ${allergyList||'Allergy'}</span>`:''}
+      ${c.status==='available'&&price?`<span class="tag tag-price">${price}</span>`:''}
+      ${sec.isFun&&c.food?`<span class="tag tag-food">🍽 ${c.food}</span>`:''}
+    </div>
+    ${c.notes?`<div class="cab-notes"><div class="cab-notes-lbl">📝</div>${c.notes}</div>`:''}
+    <div class="card-actions">
+      <button class="btn-edit" onclick="openModal('${c.id}')">✏️ Edit</button>
+      ${showQuickCheckin?`<button class="btn-quick btn-quick-checkin" onclick="quickCheckin('${c.id}')">✅ In</button>`:''}
+      ${showDup?`<button class="btn-quick btn-quick-dup" onclick="duplicateToOther('${c.id}')" title="Copy to ${currentSession==='AM'?'PM':'AM'}">📋</button>`:''}
+    </div>
+    ${c.section==='noarea'?`<button class="btn-remove-group" onclick="removeNoAreaGroup('${c.id}',event)">🗑 Remove</button>`:''}`;
+
+  if(sec.isFun){
+    return `<div class="fun-card s-${c.status}${dimmed?' dimmed':''}${c.linkedGroup?' linked':''}" id="card-${c.id}" data-group="${c.group||''}">
+      <div class="fun-card-band" style="background:${clr||'#cbd5e1'}"></div>
+      <div class="fun-card-inner">${inner}</div>
+    </div>`;
+  }
+  return `<div class="cab-card s-${c.status}${dimmed?' dimmed':''}${c.linkedGroup?' linked':''}" id="card-${c.id}" data-group="${c.group||''}">
+    ${c.status==='paid'?`<div class="paid-stamp">PAID ✓</div>`:''}
+    <div class="card-band" style="background:${clr||'#cbd5e1'}"></div>
+    <div class="card-inner">${inner}</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+// QUICK ACTIONS
+// ═══════════════════════════════════════
+function quickCheckin(id){
+  const cabs=getCabanas();
+  const c=cabs[id];
+  c.status='checkedin';
+  c.checkedInTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  saveCabana(id,c);
+  flashCard(id);
+  render();
+}
+
+function duplicateToOther(id){
+  const cabs=getCabanas();
+  const c={...cabs[id]};
+  const other=currentSession==='AM'?'PM':'AM';
+  saveCabana(id,c,currentDate,other);
+  const el=document.getElementById(`card-${id}`);
+  if(el){el.classList.add('just-updated');setTimeout(()=>el.classList.remove('just-updated'),800);}
+  alert(`Copied to ${other} session!`);
+}
+
+function flashCard(id){
+  const el=document.getElementById(`card-${id}`);
+  if(el){el.classList.add('just-updated');setTimeout(()=>el.classList.remove('just-updated'),800);}
+}
+
+// ═══════════════════════════════════════
+// RENAME
+// ═══════════════════════════════════════
+function renameCard(id,e){
+  e.stopPropagation();
+  const el=e.target;
+  const orig=el.textContent;
+  const inp=document.createElement('input');
+  inp.className='rename-input';
+  inp.value=orig;
+  el.replaceWith(inp);
+  inp.focus();inp.select();
+  const done=()=>{
+    const v=inp.value.trim()||orig;
+    customLabels[id]=v;
+    saveCustomLabels();
+    const cabs=getCabanas();
+    if(cabs[id]){cabs[id].label=v;saveCabana(id,cabs[id]);}
+    render();
+  };
+  inp.addEventListener('blur',done);
+  inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')inp.blur();if(ev.key==='Escape'){inp.value=orig;inp.blur();}});
+}
+
+function renameSection(secId){
+  const el=document.getElementById(`sec-title-${secId}`);
+  if(!el) return;
+  const sec=SECTIONS.find(s=>s.id===secId);
+  const orig=el.textContent;
+  const inp=document.createElement('input');
+  inp.className='rename-input';inp.style.fontSize='1.22rem';
+  inp.value=orig;
+  el.replaceWith(inp);inp.focus();inp.select();
+  const done=()=>{
+    const v=inp.value.trim()||orig;
+    if(sec) sec.label=v;
+    render();
+  };
+  inp.addEventListener('blur',done);
+  inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')inp.blur();if(ev.key==='Escape'){inp.value=orig;inp.blur();}});
+}
+
+// ═══════════════════════════════════════
+// WAITLIST
+// ═══════════════════════════════════════
+function wlKey(secId){return `cb_waitlist_${currentDate}_${currentSession}_${secId}`;}
+function addWaitlist(secId){
+  const inp=document.getElementById(`wl-input-${secId}`);
+  const name=inp?.value.trim();if(!name)return;
+  let wl=[];try{wl=JSON.parse(ls(wlKey(secId))||'[]');}catch(e){}
+  wl.push(name);lss(wlKey(secId),JSON.stringify(wl));inp.value='';render();
+}
+function removeWaitlist(secId,idx){
+  let wl=[];try{wl=JSON.parse(ls(wlKey(secId))||'[]');}catch(e){}
+  wl.splice(idx,1);lss(wlKey(secId),JSON.stringify(wl));render();
+}
+
+// ═══════════════════════════════════════
+// NO AREA GROUPS
+// ═══════════════════════════════════════
+function addNoAreaGroup(){
+  const saved=loadSession();let idx=1;
+  while(saved[`noarea_${idx}`]) idx++;
+  const id=`noarea_${idx}`;
+  saved[id]=blankCab(id,'noarea',`Group ${idx}`);
+  saveSession(saved);render();
+  setTimeout(()=>openModal(id),60);
+}
+function removeNoAreaGroup(id,e){
+  e.stopPropagation();
+  if(!confirm('Remove this group?')) return;
+  const saved=loadSession();delete saved[id];saveSession(saved);render();
+}
+
+// ═══════════════════════════════════════
+// KITCHEN RENDER
+// ═══════════════════════════════════════
+function renderKitchen(cabs){
+  if(!cabs) cabs=getCabanas();
+  const d=new Date(currentDate+'T12:00:00');
+  document.getElementById('kitchen-subtitle').textContent=`${currentSession==='AM'?'☀️ Morning':'🌅 Afternoon'} · ${d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}`;
+
+  // Guest summary bar
+  const v=Object.values(cabs);
+  const ciCount=v.filter(c=>c.status==='checkedin'||c.status==='paid').length;
+  const resCount=v.filter(c=>c.status==='reserved').length;
+  const ciGuests=v.filter(c=>c.status==='checkedin'||c.status==='paid').reduce((s,c)=>s+(+c.count||0),0);
+  const resGuests=v.filter(c=>c.status==='reserved').reduce((s,c)=>s+(+c.count||0),0);
+  const parkCount=parseInt(ls(`cb_parkcount_${currentDate}_${currentSession}`)||'0');
+  document.getElementById('k-summary-bar').innerHTML=`
+    <div class="k-sum-pill"><div class="k-sum-num" style="color:#06d6a0">${ciCount}</div><div class="k-sum-lbl">Checked In</div></div>
+    <div class="k-sum-pill"><div class="k-sum-num" style="color:#fbbf24">${resCount}</div><div class="k-sum-lbl">Reserved</div></div>
+    <div class="k-sum-pill"><div class="k-sum-num" style="color:#06d6a0">${ciGuests}</div><div class="k-sum-lbl">Cab Guests In</div></div>
+    <div class="k-sum-pill"><div class="k-sum-num" style="color:#fbbf24">${resGuests}</div><div class="k-sum-lbl">Expected Guests</div></div>
+    <div class="k-sum-pill"><div class="k-sum-num" style="color:var(--sky,#48cae4)">${parkCount}</div><div class="k-sum-lbl">Park Count</div></div>`;
+
+  // Allergy panel
+  const allergyGroups=[];
+  v.forEach(c=>{
+    if(c.hasAllergy&&(c.allergies||[]).length&&c.status!=='available'){
+      const allergyList=c.allergies.map(a=>a.replace(/[^\w\s&\/\-]/gu,'')).join(', ');
+      allergyGroups.push({label:c.label,group:c.group,allergies:allergyList});
+    }
+  });
+  const allergyPanel=document.getElementById('k-allergy-panel');
+  const allergyList=document.getElementById('k-allergy-list');
+  if(allergyGroups.length){
+    allergyPanel.style.display='block';
+    allergyList.innerHTML=allergyGroups.map(ag=>`<div class="k-allergy-chip">⚠️ ${ag.label}${ag.group?' ('+ag.group+')':''}: <strong>${ag.allergies}</strong></div>`).join('');
+  } else {
+    allergyPanel.style.display='none';
+  }
+
+  // Update help/orders button UI
+  updateHelpUI();updateOrdersUI();
+
+  // Kitchen cards
+  const container=document.getElementById('kitchen-container');container.innerHTML='';
+  SECTIONS.forEach(sec=>{
+    const secCabs=sec.isNoArea?Object.values(cabs).filter(c=>c.section==='noarea'):
+      Array.from({length:sec.count},(_,i)=>cabs[`${sec.id}_${i+1}`]);
+    const active=secCabs.filter(c=>c&&c.status!=='available');
+    if(!active.length) return;
+    const cards=active.map(c=>{
+      const clr=c.server?serverColor(c.server):null;
+      const allergyList=(c.allergies||[]).map(a=>a.replace(/[^\w\s&\/\-]/gu,'')).join(', ');
+      const spMap={available:'k-sp-available',reserved:'k-sp-reserved',checkedin:'k-sp-checkedin',paid:'k-sp-paid'};
+      const sbMap={available:'Available',reserved:'Reserved',checkedin:'Checked In',paid:'Paid'};
+      const lateArr=c.lateArrivals||[];
+      const lateHtml=lateArr.length?`<div class="k-row" style="flex-wrap:wrap;gap:3px;margin-top:2px">
+        ${lateArr.map(la=>`<span class="k-badge" style="background:rgba(${la.arrivedAt?'6,214,160':'245,158,11'},.12);color:${la.arrivedAt?'#6ee7b7':'#fbbf24'};border:1px solid rgba(${la.arrivedAt?'6,214,160':'245,158,11'},.3)">
+          ${la.arrivedAt?'✅':'⏳'} ${la.name} (${la.ticketType})${la.arrivedAt?' · '+la.arrivedAt:''}
+        </span>`).join('')}
+      </div>`:'' ;
+      return `<div class="k-card s-${c.status}">
+        ${clr?`<div class="k-card-srv-band" style="background:${clr}"></div>`:''}
+        <div class="k-row" style="margin-bottom:3px">
+          <div class="k-name">${c.label}${c.serverRequested?` <span style="font-size:.6rem;color:#d8b4fe;font-weight:800">🔒</span>`:''}</div>
+          <span class="k-status-pill ${spMap[c.status]||''}">${sbMap[c.status]||''}</span>
+        </div>
+        <div class="k-group${c.group?'':' empty'}">${c.group||'No group name'}</div>
+        <div class="k-row" style="margin-top:4px;flex-wrap:wrap;gap:3px">
+          ${c.server?`<span class="k-badge k-badge-srv" style="background:${clr}22;color:${clr};border:1px solid ${clr}44">● ${c.server}</span>`:''}
+          ${c.count?`<span style="font-size:.68rem;color:rgba(255,255,255,.5);font-weight:800">👥 ${c.count}</span>`:''}
+          ${c.checkedInTime?`<span style="font-size:.65rem;color:#93c5fd;font-weight:800">🕐 ${c.checkedInTime}</span>`:''}
+        </div>
+        ${c.eventType?`<div class="k-row"><span class="k-badge k-badge-event">${c.eventType}</span></div>`:''}
+        ${c.food?`<div class="k-row"><span class="k-badge k-badge-food">🍽 ${c.food}</span></div>`:''}
+        ${(c.cake||c.cupcakes)?`<div class="k-row" style="flex-wrap:wrap;gap:3px">
+          ${c.cake?`<span class="k-badge k-badge-cake">🎂${c.walkin?' · 🧊 Walk-In':''}</span>`:''}
+          ${c.cupcakes?`<span class="k-badge k-badge-cake">🧁 Cupcakes</span>`:''}
+        </div>`:''}
+        ${c.hasAllergy?`<div class="k-row"><span class="k-badge k-badge-allergy">⚠️ ALLERGY: ${allergyList||'See staff'}</span></div>`:''}
+        ${buildWBBadgeHtmlKitchen(c)}
+        ${lateHtml}
+      </div>`;
+    }).join('');
+    container.innerHTML+=`<div class="kitchen-section"><div class="kitchen-section-title">${sec.label}</div><div class="kitchen-grid">${cards}</div></div>`;
+  });
+  if(!container.innerHTML) container.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.3);font-size:.88rem;font-weight:700;padding:40px">No active reservations yet</div>';
+}
+
+// ═══════════════════════════════════════
+// TV RENDER
+// ═══════════════════════════════════════
+let lastTVState={};
+function renderTV(cabs){
+  if(!cabs) cabs=getCabanas();
+  const v=Object.values(cabs);
+  const ci=v.filter(c=>c.status==='checkedin'||c.status==='paid').length;
+  const res=v.filter(c=>c.status==='reserved').length;
+  const av=v.filter(c=>c.status==='available').length;
+  const pd=v.filter(c=>c.status==='paid').length;
+  const parkCount=parseInt(ls(`cb_parkcount_${currentDate}_${currentSession}`)||'0');
+  const d=new Date(currentDate+'T12:00:00');
+  const sessTxt=currentSession==='AM'?'☀️ Morning Session  10:30 AM – 2:00 PM':'🌅 Afternoon Session  2:30 PM – 6:00 PM';
+  document.getElementById('tv-subtitle').textContent=`${sessTxt}  •  ${d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}`;
+  document.getElementById('tv-stats').innerHTML=`
+    <div class="tv-stat"><div class="tv-stat-n" style="color:var(--mint)">${ci}</div><div class="tv-stat-l">Checked In</div></div>
+    <div class="tv-stat"><div class="tv-stat-n" style="color:#fbbf24">${res}</div><div class="tv-stat-l">Reserved</div></div>
+    <div class="tv-stat"><div class="tv-stat-n" style="color:#86efac">${pd}</div><div class="tv-stat-l">Paid</div></div>
+    <div class="tv-stat"><div class="tv-stat-n" style="color:rgba(255,255,255,.3)">${av}</div><div class="tv-stat-l">Available</div></div>
+    <div class="tv-stat"><div class="tv-stat-n" style="color:var(--sky)">${parkCount}</div><div class="tv-stat-l">Park Guests</div></div>`;
+  const activeSrvs=[...new Set(v.filter(c=>c.server).map(c=>c.server))];
+  document.getElementById('tv-legend').innerHTML=activeSrvs.map(s=>`<div class="tv-legend-item"><div class="tv-legend-dot" style="background:${serverColor(s)}"></div>${s}</div>`).join('');
+  const container=document.getElementById('tv-sections');container.innerHTML='';
+  SECTIONS.forEach(sec=>{
+    const secCabs=sec.isNoArea?Object.values(cabs).filter(c=>c.section==='noarea'):
+      Array.from({length:sec.count},(_,i)=>cabs[`${sec.id}_${i+1}`]).filter(Boolean);
+    const cards=secCabs.map(c=>{
+      const clr=c.server?serverColor(c.server):null;
+      const price=prices[sec.id]?`$${prices[sec.id]}`:'';
+      const bMap={available:'⬜ Available',reserved:'🔶 Reserved',checkedin:'✅ Checked In',paid:'💚 Paid'};
+      const bandColor=clr||(c.status==='checkedin'?'#06d6a0':c.status==='reserved'?'#f59e0b':c.status==='paid'?'#22c55e':'#475569');
+      const prevState=lastTVState[c.id];
+      const changed=prevState&&(prevState.status!==c.status||prevState.group!==c.group||prevState.server!==c.server);
+      lastTVState[c.id]={status:c.status,group:c.group,server:c.server};
+      return `<div class="tv-card tv-${c.status}${changed?' tv-flash':''}">
+        <div class="tv-card-band" style="background:${bandColor}"></div>
+        <div class="tv-card-inner">
+          <div class="tv-card-name">${c.label}</div>
+          <div class="tv-card-badge">${bMap[c.status]||''}</div>
+          ${c.status==='available'&&price?`<div class="tv-price">${price}</div><div class="tv-cap">${sec.cap}</div>`:''}
+          ${c.group?`<div class="tv-card-group">${c.group}</div>`:''}
+          <div class="tv-card-detail">${c.count?`<span>👥 ${c.count}</span>`:''}</div>
+          ${c.server&&clr?`<div style="margin-top:2px"><span class="tv-srv-badge" style="background:${clr}22;color:${clr};border:1px solid ${clr}44">● ${c.server}</span></div>`:''}
+          <div class="tv-tags" style="margin-top:3px">
+            ${c.checkedInTime?`<span class="tv-tag tv-tag-time">🕐 ${c.checkedInTime}</span>`:''}
+            ${(c.status==='checkedin'||c.status==='paid'||c.status==='reserved')
+              ?(c.walkIn?`<span class="tv-tag tv-tag-walkin">🚶 Walk-In</span>`:`<span class="tv-tag tv-tag-reservation">📅 Res</span>`)
+              :''}
+            ${buildWBTagHtmlTV(c)}
+            ${c.seasonPass?`<span class="tv-tag tv-tag-sp">🌟 SP</span>`:''}
+            ${c.allDay?`<span class="tv-tag tv-tag-allday">All Day</span>`:''}
+            ${(c.cake||c.cupcakes)?`<span class="tv-tag tv-tag-cake">${c.cake?'🎂':''}${c.cupcakes?'🧁':''}</span>`:''}
+            ${c.food?`<span class="tv-tag tv-tag-food">🍽 ${c.food}</span>`:''}
+            ${c.status==='paid'?`<span class="tv-tag tv-tag-paid">💚 PAID</span>`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    if(cards) container.innerHTML+=`<div><div class="tv-section-title">${sec.label}</div><div class="tv-grid">${cards}</div></div>`;
+  });
+  document.getElementById('last-updated').textContent='Last updated: '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(weatherData){const b=document.getElementById('tv-weather-bar');if(b&&!b.innerHTML) b.innerHTML=`<span>${weatherData}</span><span style="opacity:.5">Draper, UT</span>`;}
+  // Help banners (per item)
+  updateHelpUI();
+  // Hourly weather
+  if(hourlyWeatherData.length) renderHourlyWeather();
+}
+
+function toggleTVZoom(){
+  tvZoomOn=!tvZoomOn;
+  document.getElementById('tv-view').classList.toggle('tv-zoom',tvZoomOn);
+  document.getElementById('tv-zoom-btn').classList.toggle('active',tvZoomOn);
+}
+function toggleTVScroll(){
+  if(tvScrollInterval){clearInterval(tvScrollInterval);tvScrollInterval=null;document.getElementById('tv-scroll-btn').classList.remove('active');return;}
+  document.getElementById('tv-scroll-btn').classList.add('active');
+  tvScrollInterval=setInterval(()=>{
+    const tv=document.getElementById('tv-view');
+    const maxScroll=tv.scrollHeight-tv.clientHeight;
+    if(tv.scrollTop>=maxScroll-10) tv.scrollTop=0;
+    else tv.scrollTop+=2;
+  },40);
+}
+
+// ═══════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════
+function openModal(id){
+  const cabs=getCabanas();const c=cabs[id];
+  modalId=id;modalStatus=c.status||'available';
+  const sec=SECTIONS.find(s=>s.id===c.section)||{};
+  isFunModal=!!sec.isFun;
+  modalPhotos=[...(c.photos||[])];
+  document.getElementById('modal-title').innerHTML=`✏️ ${c.label}${c.allDay?'<span class="modal-allday-badge">All Day</span>':''}`;
+  document.getElementById('f-food-row').style.display=isFunModal?'block':'none';
+  document.getElementById('ticket-section').style.display=isFunModal?'none':'block';
+  document.getElementById('f-group').value=c.group||'';
+  document.getElementById('f-event').value=c.eventType||'';
+  document.getElementById('f-food').value=c.food||'';
+  document.getElementById('f-notes').value=c.notes||'';
+  const cs=document.getElementById('f-count');
+  cs.innerHTML='<option value="">— Select —</option>';
+  for(let i=1;i<=200;i++){const o=new Option(`${i}`,i);if(String(i)===String(c.count))o.selected=true;cs.appendChild(o);}
+  const ss=document.getElementById('f-server');
+  ss.innerHTML='<option value="">— Unassigned —</option>';
+  servers.forEach(s=>{const o=new Option(s.name,s.name);if(s.name===c.server)o.selected=true;ss.appendChild(o);});
+  ['sp','allday','cake','cupcakes','walkin','candles','lighter','has-allergy'].forEach(f=>{
+    const el=document.getElementById(`f-${f}`);if(el) el.checked=!!c[f.replace('-','A').replace('a','A')===f?f:f.replace('-has-allergy','hasAllergy').replace('f-','')];
+  });
+  document.getElementById('f-sp').checked=!!c.seasonPass;
+  document.getElementById('f-allday').checked=!!c.allDay;
+  document.getElementById('f-cake').checked=!!c.cake;
+  document.getElementById('f-cupcakes').checked=!!c.cupcakes;
+  document.getElementById('f-walkin').checked=!!c.walkin;
+  document.getElementById('f-candles').checked=!!c.candles;
+  document.getElementById('f-lighter').checked=!!c.lighter;
+  document.getElementById('f-has-allergy').checked=!!c.hasAllergy;
+  document.getElementById('f-srv-requested').checked=!!c.serverRequested;
+  document.getElementById('f-walkin-type').checked=!!c.walkIn;
+  // Wristband
+  document.getElementById('f-has-wristband').checked=!!c.hasWristband;
+  updateWristbandUI();
+  document.querySelectorAll('.wb-color-btn').forEach(b=>b.classList.toggle('selected',b.dataset.color===c.wristbandColor));
+  document.getElementById('wb-meal-section').style.display=c.wristbandColor==='meal-dessert'?'block':'none';
+  document.querySelectorAll('.wb-meal-btn').forEach(b=>b.classList.toggle('selected',b.dataset.meal===c.wristbandMealType));
+  // Late arrivals
+  modalLateArrivals=[...(c.lateArrivals||[])];
+  renderLateArrivalsModal();
+  updateDessertUI();updateAllergyUI();
+  const al=document.getElementById('f-allergy');
+  const saved=c.allergies||[];
+  [...al.options].forEach(o=>o.selected=saved.includes(o.value));
+  const tk=c.tickets||{};
+  ['over48','under48','senior','spectator'].forEach(k=>{const el=document.getElementById(`tk-${k}`);if(el)el.value=tk[k]||'';});
+  renderPhotoThumbs();
+  const allIds=[];SECTIONS.forEach(s=>{if(s.isNoArea){Object.values(getCabanas()).filter(x=>x.section==='noarea').forEach(x=>allIds.push(x.id));}else{for(let i=1;i<=s.count;i++)allIds.push(`${s.id}_${i}`);}});
+  const lc=document.getElementById('link-options');
+  lc.innerHTML=allIds.filter(x=>x!==id).map(oid=>{
+    const oc=cabs[oid];if(!oc)return'';
+    const isLinked=c.linkedGroup&&oc.linkedGroup&&c.linkedGroup===oc.linkedGroup;
+    return `<button class="link-chip${isLinked?' linked':''}" onclick="this.classList.toggle('linked')">${oc.label}</button>`;
+  }).join('');
+  updateModalUI();
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('f-group').focus(),80);
+}
+
+function renderPhotoThumbs(){
+  document.getElementById('photo-thumbs').innerHTML=modalPhotos.map((src,i)=>
+    `<div class="photo-thumb"><img src="${src}"><button class="del-photo" onclick="removePhoto(${i})">×</button></div>`
+  ).join('');
+}
+function handlePhotos(input){
+  const files=[...input.files];
+  files.forEach(f=>{
+    const reader=new FileReader();
+    reader.onload=e=>{modalPhotos.push(e.target.result);renderPhotoThumbs();};
+    reader.readAsDataURL(f);
+  });
+  input.value='';
+}
+function removePhoto(i){modalPhotos.splice(i,1);renderPhotoThumbs();}
+
+function updateDessertUI(){document.getElementById('cake-extras').style.display=document.getElementById('f-cake').checked?'block':'none';}
+function updateAllergyUI(){document.getElementById('allergy-picker').style.display=document.getElementById('f-has-allergy').checked?'block':'none';}
+function updateWristbandUI(){
+  const has=document.getElementById('f-has-wristband').checked;
+  document.getElementById('wristband-picker').classList.toggle('open',has);
+}
+function selectWBColor(color){
+  document.querySelectorAll('.wb-color-btn').forEach(b=>b.classList.toggle('selected',b.dataset.color===color));
+  document.getElementById('wb-meal-section').style.display=color==='meal-dessert'?'block':'none';
+  if(color!=='meal-dessert') document.querySelectorAll('.wb-meal-btn').forEach(b=>b.classList.remove('selected'));
+}
+function selectWBMeal(type){
+  document.querySelectorAll('.wb-meal-btn').forEach(b=>b.classList.toggle('selected',b.dataset.meal===type));
+}
+function getModalWBColor(){
+  const btn=document.querySelector('.wb-color-btn.selected');return btn?btn.dataset.color:'';}
+function getModalWBMeal(){
+  const btn=document.querySelector('.wb-meal-btn.selected');return btn?btn.dataset.meal:'';}
+function buildWBDotHtml(color,size='sm'){
+  const wb=WB_COLORS[color];if(!wb) return '';
+  const isGrad=wb.css.startsWith('linear');
+  const style=isGrad?`background:${wb.css}`:`background:${wb.css};box-shadow:0 0 0 1px ${wb.border}`;
+  return `<span class="wb-dot-${size}" style="${style}"></span>`;
+}
+function buildWBTagHtml(c){
+  if(!c.hasWristband||!c.wristbandColor) return '';
+  const wb=WB_COLORS[c.wristbandColor];if(!wb) return '';
+  const label=c.wristbandColor==='meal-dessert'
+    ?(c.wristbandMealType==='meal'?'Meal WB':c.wristbandMealType==='dessert'?'Dessert WB':'Meal+Dessert WB')
+    :`${wb.label} WB`;
+  const isGrad=wb.css.startsWith('linear');
+  const dotStyle=isGrad?`background:${wb.css}`:`background:${wb.css};box-shadow:0 0 0 1.5px ${wb.border}`;
+  const tagBorder=isGrad?'#a855f7':wb.border;
+  const tagBg=isGrad?'rgba(168,85,247,.1)':`${wb.css}18`;
+  const tagColor=c.wristbandColor==='white'?'#374151':(isGrad?'#c084fc':wb.border);
+  return `<span class="tag tag-wb" style="border-color:${tagBorder};background:${tagBg};color:${tagColor}">${buildWBDotHtml(c.wristbandColor,'sm')} ${label}</span>`;
+}
+function buildWBTagHtmlTV(c){
+  if(!c.hasWristband||!c.wristbandColor) return '';
+  const wb=WB_COLORS[c.wristbandColor];if(!wb) return '';
+  const isGrad=wb.css.startsWith('linear');
+  const dotStyle=isGrad?`background:${wb.css}`:`background:${wb.css};box-shadow:0 0 0 1px ${wb.border}`;
+  const lbl=c.wristbandColor==='meal-dessert'
+    ?(c.wristbandMealType==='meal'?'Meal WB':c.wristbandMealType==='dessert'?'Dsrt WB':'Meal+Dsrt WB')
+    :`${wb.label} WB`;
+  return `<span class="tv-tag tv-tag-wb"><span style="${dotStyle};width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;margin-right:2px"></span>${lbl}</span>`;
+}
+function buildWBBadgeHtmlKitchen(c){
+  if(!c.hasWristband||!c.wristbandColor) return '';
+  const wb=WB_COLORS[c.wristbandColor];if(!wb) return '';
+  const isGrad=wb.css.startsWith('linear');
+  const dotStyle=isGrad?`background:${wb.css}`:`background:${wb.css};box-shadow:0 0 0 1.5px ${wb.border}`;
+  const lbl=c.wristbandColor==='meal-dessert'
+    ?(c.wristbandMealType==='meal'?'Meal Wristband':c.wristbandMealType==='dessert'?'Dessert Wristband':'Meal+Dessert Wristband')
+    :`${wb.label} Wristband`;
+  return `<div class="k-row"><span class="k-badge k-badge-wb"><span class="wb-dot-k" style="${dotStyle}"></span> 🪬 ${lbl}</span></div>`;
+}
+function setModalStatus(val){modalStatus=val;updateModalUI();}
+function updateModalUI(){['available','reserved','checkedin','paid'].forEach(v=>document.getElementById(`stog-${v}`).classList.toggle('sel',v===modalStatus));}
+function closeModal(){document.getElementById('overlay').classList.remove('open');modalId=null;}
+
+// ═══════════════════════════════════════
+// LATE ARRIVALS
+// ═══════════════════════════════════════
+function renderLateArrivalsModal(){
+  const list=document.getElementById('late-arrivals-list');
+  if(!list) return;
+  if(!modalLateArrivals.length){list.innerHTML='<div style="font-size:.72rem;color:var(--sub);font-style:italic;padding:2px 0 4px;">No late arrivals added yet</div>';return;}
+  list.innerHTML=modalLateArrivals.map((la,i)=>`
+    <div class="late-arr-item${la.arrivedAt?' arrived':''}">
+      <span class="late-arr-name">${la.name}</span>
+      <span class="late-arr-type">${la.ticketType}</span>
+      ${la.arrivedAt?`<span class="late-arr-ts">✅ ${la.arrivedAt}</span>`:
+        `<button class="btn-mark-arrived" onclick="markLateArrived(${i})">Mark Arrived</button>`}
+      <button class="btn-rm-late" onclick="removeLateArrival(${i})">×</button>
+    </div>`).join('');
+}
+function addLateArrival(){
+  const nameEl=document.getElementById('late-name-input');
+  const typeEl=document.getElementById('late-type-input');
+  const name=nameEl?.value.trim();
+  if(!name) return;
+  modalLateArrivals.push({name,ticketType:typeEl.value,arrivedAt:null});
+  nameEl.value='';
+  renderLateArrivalsModal();
+}
+function removeLateArrival(i){modalLateArrivals.splice(i,1);renderLateArrivalsModal();}
+function markLateArrived(i){
+  if(!modalLateArrivals[i]) return;
+  modalLateArrivals[i].arrivedAt=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  renderLateArrivalsModal();
+}
+
+// ═══════════════════════════════════════
+// HELP NEEDED / ORDERS TOGGLES
+// ═══════════════════════════════════════
+function toggleHelpItem(key){
+  helpItems[key]=!helpItems[key];
+  helpNeeded=Object.values(helpItems).some(Boolean);
+  saveSharedState();
+  updateHelpUI();
+}
+function toggleBreakroomOrders(){
+  ordersOn=!ordersOn;
+  saveSharedState();
+  updateOrdersUI();
+}
+function toggle607(){
+  const chk=document.getElementById('setting-607-on');
+  alert607.on=chk?chk.checked:!alert607.on;
+  saveSharedState();
+  updateHelpUI();
+}
+function set607Location(loc){
+  alert607.location=loc;
+  saveSharedState();
+  updateHelpUI();
+}
+function updateHelpUI(){
+  // Kitchen board: update each help item button
+  const helpKeys=['pitchers','pizzaTrays','expediting','generalHelp','dishes'];
+  helpKeys.forEach(key=>{
+    const btn=document.getElementById(`k-help-${key}`);
+    if(btn) btn.className=`k-help-item-btn ${helpItems[key]?'on':'off'}`;
+  });
+
+  // TV: toggle each banner
+  helpKeys.forEach(key=>{
+    const el=document.getElementById(`tv-help-${key}`);
+    if(el) el.classList.toggle('active',!!helpItems[key]);
+  });
+  const tv607=document.getElementById('tv-help-607');
+  if(tv607){
+    tv607.classList.toggle('active',!!alert607.on);
+    const tv607text=document.getElementById('tv-607-text');
+    const tv607sub=document.getElementById('tv-607-sub');
+    if(tv607text) tv607text.textContent=`💩 607 ALERT — ${alert607.location} 💩`;
+    if(tv607sub) tv607sub.textContent=`Notify maintenance: ${alert607.location}`;
+  }
+
+  // Break room: toggle each alert
+  helpKeys.forEach(key=>{
+    const el=document.getElementById(`br-alert-${key}`);
+    if(el) el.classList.toggle('active',!!helpItems[key]);
+  });
+  const br607=document.getElementById('br-alert-607');
+  if(br607){
+    br607.classList.toggle('active',!!alert607.on);
+    const br607text=document.getElementById('br-alert-607-text');
+    const br607sub=document.getElementById('br-alert-607-sub');
+    if(br607text) br607text.textContent=`💩 607 ALERT — ${alert607.location} 💩`;
+    if(br607sub) br607sub.textContent=`Notify maintenance: ${alert607.location}`;
+  }
+
+  // Manager alerts panel
+  const mgPanel=document.getElementById('mgr-alerts-panel');
+  const mgChips=document.getElementById('mgr-alert-chips');
+  const helpLabels={pitchers:'🫙 Pitchers Needed',pizzaTrays:'🍕 Pizza Trays Needed',expediting:'🚀 Expediting Help',generalHelp:'🙋 General Help',dishes:'🍽 Dishes Needed'};
+  const activeHelp=helpKeys.filter(k=>helpItems[k]).map(k=>`<span class="mgr-alert-chip mgr-alert-chip-help">${helpLabels[k]}</span>`);
+  if(alert607.on) activeHelp.push(`<span class="mgr-alert-chip mgr-alert-chip-607">💩 607 — ${alert607.location}</span>`);
+  if(mgPanel) mgPanel.classList.toggle('has-alerts',activeHelp.length>0);
+  if(mgChips) mgChips.innerHTML=activeHelp.join('');
+
+  // Sync 607 toggle UI in manager settings
+  const chk607=document.getElementById('setting-607-on');
+  if(chk607) chk607.checked=!!alert607.on;
+  const loc607=document.getElementById('setting-607-location');
+  if(loc607) loc607.value=alert607.location||'Kids Cove';
+}
+function updateOrdersUI(){
+  const kBtn=document.getElementById('k-orders-btn');
+  if(kBtn){kBtn.className=`k-orders-btn ${ordersOn?'on':'off'}`;kBtn.textContent=ordersOn?'🍕 Orders: ON':'🍕 Orders: OFF';}
+  const ind=document.getElementById('br-indicator');
+  const icon=document.getElementById('br-status-icon');
+  const txt=document.getElementById('br-status-text');
+  const sub=document.getElementById('br-status-sub');
+  if(ind){
+    ind.className=`br-indicator ${ordersOn?'orders-on':'orders-off'}`;
+    if(icon) icon.textContent=ordersOn?'✅':'🚫';
+    if(txt) txt.textContent=ordersOn?'ORDERS OPEN':'ORDERS CLOSED';
+    if(sub) sub.textContent=ordersOn?'Kitchen is accepting employee orders':'Kitchen cannot take orders right now';
+  }
+}
+
+// ═══════════════════════════════════════
+// PAGE-SPECIFIC DARK/LIGHT MODES
+// ═══════════════════════════════════════
+function toggleKitchenDark(){
+  kitchenDark=!kitchenDark;
+  const kv=document.getElementById('kitchen-view');
+  if(kv) kv.classList.toggle('k-light',!kitchenDark);
+  const btn=kv?.querySelector('.k-page-toggle');
+  if(btn) btn.textContent=kitchenDark?'☀️':'🌙';
+  lss('cb_kitchen_dark',kitchenDark?'1':'0');
+}
+function toggleBreakroomDark(){
+  breakroomDark=!breakroomDark;
+  const bv=document.getElementById('breakroom-view');
+  if(bv){bv.classList.toggle('br-dark',breakroomDark);bv.classList.toggle('br-light',!breakroomDark);}
+  const btn=bv?.querySelector('.br-page-btn');
+  if(btn) btn.textContent=breakroomDark?'☀️':'🌙';
+  lss('cb_breakroom_dark',breakroomDark?'1':'0');
+}
+function toggleHeadcountDark(){
+  headcountDark=!headcountDark;
+  const hv=document.getElementById('headcount-view');
+  if(hv) hv.classList.toggle('hc-light',!headcountDark);
+  const btn=hv?.querySelector('.hc-page-btn');
+  if(btn) btn.textContent=headcountDark?'☀️':'🌙';
+  lss('cb_headcount_dark',headcountDark?'1':'0');
+}
+
+// ═══════════════════════════════════════
+// HEADCOUNT PAGE
+// ═══════════════════════════════════════
+function hcAdjust(d){
+  const k=`cb_parkcount_${currentDate}_${currentSession}`;
+  const n=Math.max(0,(parseInt(ls(k)||'0'))+d);
+  lss(k,n);
+  renderHeadcount();
+  renderStats(getCabanas());
+}
+function hcReset(){
+  if(!confirm('Reset park headcount to 0?')) return;
+  const k=`cb_parkcount_${currentDate}_${currentSession}`;
+  lss(k,0);renderHeadcount();renderStats(getCabanas());
+}
+function renderHeadcount(){
+  const k=`cb_parkcount_${currentDate}_${currentSession}`;
+  const n=parseInt(ls(k)||'0');
+  const el=document.getElementById('hc-display');
+  if(el){
+    el.textContent=n;
+    el.classList.add('bump');
+    setTimeout(()=>el.classList.remove('bump'),150);
+  }
+  // Sub title
+  const d=new Date(currentDate+'T12:00:00');
+  const sub=document.getElementById('hc-subtitle');
+  if(sub) sub.textContent=`${currentSession==='AM'?'☀️ Morning':'🌅 Afternoon'} · ${d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})}`;
+  // Stats
+  const cabs=getCabanas();const v=Object.values(cabs);
+  const cabGuests=v.filter(c=>c.status==='checkedin'||c.status==='paid').reduce((s,c)=>s+(+c.count||0),0);
+  const statsRow=document.getElementById('hc-stats-row');
+  if(statsRow) statsRow.innerHTML=`
+    <div class="hc-stat"><div class="hc-stat-num">${cabGuests}</div><div class="hc-stat-lbl">Cabana Guests</div></div>
+    <div class="hc-stat"><div class="hc-stat-num">${v.filter(c=>c.status==='checkedin'||c.status==='paid').length}</div><div class="hc-stat-lbl">Cabanas In</div></div>
+    <div class="hc-stat"><div class="hc-stat-num">${v.filter(c=>c.status==='reserved').length}</div><div class="hc-stat-lbl">Reserved</div></div>`;
+}
+
+// ═══════════════════════════════════════
+// BREAK ROOM PAGE
+// ═══════════════════════════════════════
+function renderBreakroom(){
+  updateOrdersUI();
+  updateHelpUI();
+}
+
+function modalAutoSave(){
+  if(!modalId) return;
+  const grpEl=document.getElementById('f-group');
+  const notesEl=document.getElementById('f-notes');
+  if(!grpEl||!notesEl) return;
+  const s=loadSession();
+  if(!s[modalId]) s[modalId]={};
+  s[modalId].group=grpEl.value.trim();
+  s[modalId].notes=notesEl.value.trim();
+  lss(stateKey(),JSON.stringify(s));
+  sbSyncSessionDebounced(s);
+}
+
+function saveModal(){
+  if(!modalId) return;
+  const cabs=getCabanas();const c=cabs[modalId];
+  const wasAllDay=c.allDay;const nowAllDay=document.getElementById('f-allday').checked;
+  const allergies=[...document.getElementById('f-allergy').selectedOptions].map(o=>o.value);
+  const wasCheckedIn=c.status==='checkedin'||c.status==='paid';
+  const nowCheckedIn=modalStatus==='checkedin'||modalStatus==='paid';
+  Object.assign(c,{
+    group:document.getElementById('f-group').value.trim(),
+    count:document.getElementById('f-count').value,
+    server:document.getElementById('f-server').value,
+    status:modalStatus,
+    eventType:document.getElementById('f-event').value,
+    food:isFunModal?document.getElementById('f-food').value:'',
+    notes:document.getElementById('f-notes').value.trim(),
+    seasonPass:document.getElementById('f-sp').checked,
+    allDay:nowAllDay,
+    cake:document.getElementById('f-cake').checked,
+    cupcakes:document.getElementById('f-cupcakes').checked,
+    walkin:document.getElementById('f-walkin').checked,
+    candles:document.getElementById('f-candles').checked,
+    lighter:document.getElementById('f-lighter').checked,
+    hasAllergy:document.getElementById('f-has-allergy').checked,
+    allergies,
+    tickets:{over48:+document.getElementById('tk-over48').value||0,under48:+document.getElementById('tk-under48').value||0,senior:+document.getElementById('tk-senior').value||0,spectator:+document.getElementById('tk-spectator').value||0},
+    photos:modalPhotos,
+    serverRequested:document.getElementById('f-srv-requested').checked,
+    walkIn:document.getElementById('f-walkin-type').checked,
+    hasWristband:document.getElementById('f-has-wristband').checked,
+    wristbandColor:document.getElementById('f-has-wristband').checked?getModalWBColor():'',
+    wristbandMealType:document.getElementById('f-has-wristband').checked&&getModalWBColor()==='meal-dessert'?getModalWBMeal():'',
+    lateArrivals:modalLateArrivals,
+    checkedInTime:(!wasCheckedIn&&nowCheckedIn)?new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):c.checkedInTime||'',
+  });
+  const linked=[...document.querySelectorAll('#link-options .link-chip.linked')];
+  if(linked.length>0){const grp=c.linkedGroup||`Group:${c.label}`;c.linkedGroup=grp;linked.forEach(btn=>{const m=Object.values(cabs).find(x=>x.label===btn.textContent.trim());if(m){m.linkedGroup=grp;saveCabana(m.id,m);}});}
+  else c.linkedGroup='';
+  saveCabana(modalId,c);
+  if(nowAllDay){const other=currentSession==='AM'?'PM':'AM';const oc={...getCabanas(currentDate,other)[modalId],...{group:c.group,count:c.count,server:c.server,status:c.status,eventType:c.eventType,food:c.food,seasonPass:c.seasonPass,allDay:true,cake:c.cake,cupcakes:c.cupcakes,walkin:c.walkin,candles:c.candles,lighter:c.lighter,hasAllergy:c.hasAllergy,allergies,linkedGroup:c.linkedGroup,tickets:c.tickets,photos:c.photos,checkedInTime:c.checkedInTime}};saveCabana(modalId,oc,currentDate,other);}
+  else if(wasAllDay&&!nowAllDay){const other=currentSession==='AM'?'PM':'AM';const oc=getCabanas(currentDate,other)[modalId];if(oc){oc.allDay=false;saveCabana(modalId,oc,currentDate,other);}}
+  closeModal();flashCard(modalId);render();
+}
+
+function clearCabana(){
+  if(!modalId) return;
+  if(!confirm('Clear all data for this cabana?')) return;
+  const cabs=getCabanas();
+  pushUndo(modalId,{...cabs[modalId]});
+  const lbl=cabs[modalId].label;
+  const blank={...blankCab(modalId,modalId.split('_')[0],lbl)};
+  saveCabana(modalId,blank);
+  const other=currentSession==='AM'?'PM':'AM';
+  saveCabana(modalId,{...blank},currentDate,other);
+  closeModal();render();
+}
+
+// ═══════════════════════════════════════
+// SERVERS
+// ═══════════════════════════════════════
+function addServer(){
+  const inp=document.getElementById('new-srv-input');
+  const name=inp.value.trim();
+  if(name&&!servers.find(s=>s.name===name)){servers.push({name,color:PRESET_COLORS[servers.length%PRESET_COLORS.length]});saveServers();inp.value='';render();}
+}
+function removeServer(name,e){
+  e.stopPropagation();
+  if(serverFilter===name) serverFilter=null;
+  servers=servers.filter(s=>s.name!==name);saveServers();render();
+}
+
+// ═══════════════════════════════════════
+// EXPORT CSV
+// ═══════════════════════════════════════
+function exportCSV(){
+  const cabs=getCabanas();
+  const rows=[['Cabana','Group','Headcount','Server','Status','Check-In Time','Event','Season Pass','Notes','Date','Session']];
+  Object.values(cabs).forEach(c=>{
+    rows.push([c.label,c.group,c.count,c.server,c.status,c.checkedInTime||'',c.eventType,c.seasonPass?'Yes':'',c.notes,currentDate,currentSession]);
+  });
+  const csv=rows.map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download=`cabanas_${currentDate}_${currentSession}.csv`;
+  a.click();
+}
+
+// ═══════════════════════════════════════
+// REPORTS
+// ═══════════════════════════════════════
+function setReportPeriod(p){reportPeriod=p;['week','month','all'].forEach(x=>document.getElementById(`pt-${x}`).classList.toggle('active',x===p));renderReports();}
+function calChangeMonth(d){calMonth+=d;if(calMonth<0){calMonth=11;calYear--;}if(calMonth>11){calMonth=0;calYear++;}renderReports();}
+function getAllDataDates(){const dates=new Set();try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('cb_')&&!k.startsWith('cb_servers')&&!k.startsWith('cb_prices')&&!k.startsWith('cb_parkcount')&&!k.startsWith('cb_waitlist')&&!k.startsWith('cb_shiftnotes')&&!k.startsWith('cb_labels')&&!k.startsWith('cb_theme')){const parts=k.split('_');if(parts.length>=3&&/^\d{4}-\d{2}-\d{2}$/.test(parts[1]))dates.add(parts[1]);}}}catch(e){}return [...dates].sort();}
+function getDayStats(dateStr){
+  const amC=Object.values(getCabanas(dateStr,'AM'));const pmC=Object.values(getCabanas(dateStr,'PM'));
+  const amCount=amC.filter(c=>c.status==='checkedin'||c.status==='paid').reduce((s,c)=>s+(+c.count||0),0);
+  const pmCount=pmC.filter(c=>c.status==='checkedin'||c.status==='paid').reduce((s,c)=>s+(+c.count||0),0);
+  let parkAM=0,parkPM=0;try{parkAM=parseInt(ls(`cb_parkcount_${dateStr}_AM`)||'0');}catch(e){}try{parkPM=parseInt(ls(`cb_parkcount_${dateStr}_PM`)||'0');}catch(e){}
+  return {amCount,pmCount,total:amCount+pmCount,parkAM,parkPM,parkTotal:parkAM+parkPM,amBooked:amC.filter(c=>c.status!=='available').length,pmBooked:pmC.filter(c=>c.status!=='available').length};
+}
+function getDateRange(){
+  const today=new Date();
+  if(reportPeriod==='week') return Array.from({length:7},(_,i)=>{const d=new Date(today);d.setDate(d.getDate()-(6-i));return d.toISOString().slice(0,10);});
+  if(reportPeriod==='month'){const y=today.getFullYear(),m=today.getMonth();const days=new Date(y,m+1,0).getDate();return Array.from({length:days},(_,i)=>`${y}-${p2(m+1)}-${p2(i+1)}`);}
+  return getAllDataDates();
+}
+
+function renderReports(){
+  const dates=getDateRange();
+  const stats=dates.map(d=>({date:d,...getDayStats(d)}));
+  const totalGuests=stats.reduce((s,d)=>s+d.total,0);
+  const totalPark=stats.reduce((s,d)=>s+d.parkTotal,0);
+  const totalAM=stats.reduce((s,d)=>s+d.amCount,0);
+  const totalPM=stats.reduce((s,d)=>s+d.pmCount,0);
+  const activeDays=stats.filter(d=>d.total>0||d.parkTotal>0).length;
+  const avgGuests=activeDays?Math.round(totalGuests/activeDays):0;
+  document.getElementById('rpt-summary').innerHTML=`
+    <div class="rpt-card"><div class="rpt-card-num" style="color:var(--ocean)">${totalPark||totalGuests}</div><div class="rpt-card-lbl">Park Guests</div></div>
+    <div class="rpt-card"><div class="rpt-card-num" style="color:var(--mint)">${totalGuests}</div><div class="rpt-card-lbl">Cabana Guests</div></div>
+    <div class="rpt-card"><div class="rpt-card-num" style="color:var(--sky)">${totalAM}</div><div class="rpt-card-lbl">AM Guests</div></div>
+    <div class="rpt-card"><div class="rpt-card-num" style="color:var(--sand)">${totalPM}</div><div class="rpt-card-lbl">PM Guests</div></div>
+    <div class="rpt-card"><div class="rpt-card-num" style="color:#d97706">${activeDays}</div><div class="rpt-card-lbl">Active Days</div></div>
+    <div class="rpt-card"><div class="rpt-card-num" style="color:#7c3aed">${avgGuests}</div><div class="rpt-card-lbl">Avg / Day</div></div>`;
+  const maxVal=Math.max(...stats.map(d=>d.parkTotal||d.total),1);
+  const barH=120;
+  document.getElementById('chart-title').textContent=`${reportPeriod==='all'?'All-Time':'Daily'} Attendance`;
+  document.getElementById('chart-area').innerHTML=stats.map(d=>{
+    const amH=Math.round((d.amCount/maxVal)*barH);
+    const pmH=Math.round((d.pmCount/maxVal)*barH);
+    const pkH=Math.round(((d.parkTotal||d.total)/maxVal)*barH);
+    const dt=new Date(d.date+'T12:00:00');
+    const lbl=reportPeriod==='all'?dt.toLocaleDateString('en-US',{month:'numeric',day:'numeric'}):reportPeriod==='month'?dt.getDate():dt.toLocaleDateString('en-US',{weekday:'short'});
+    const total=d.parkTotal||d.total;
+    const isToday=d.date===todayKey();
+    return `<div class="chart-bar-wrap" onclick="selectCalDay('${d.date}')" title="${d.date}: ${total}">
+      <div style="height:${barH}px;display:flex;align-items:flex-end;gap:1px;width:100%;position:relative;">
+        ${total?`<div class="chart-val">${total}</div>`:''}
+        <div class="chart-bar chart-bar-am" style="flex:1;height:${amH}px"></div>
+        <div class="chart-bar chart-bar-pm" style="flex:1;height:${pmH}px"></div>
+        ${d.parkTotal?`<div class="chart-bar chart-bar-total" style="flex:1;height:${pkH}px"></div>`:''}
+      </div>
+      <div class="chart-label" style="${isToday?'color:var(--ocean);font-weight:900':''}">${lbl}</div>
+    </div>`;
+  }).join('');
+  renderCalendar();
+  if(selectedCalDay) renderDayDetail(selectedCalDay);
+}
+
+function renderCalendar(){
+  const allDates=getAllDataDates();const dataSet=new Set(allDates);
+  const statsMap={};allDates.forEach(d=>{statsMap[d]=getDayStats(d);});
+  const maxVal=Math.max(...Object.values(statsMap).map(s=>s.parkTotal||s.total),1);
+  const firstDay=new Date(calYear,calMonth,1);
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const startDow=firstDay.getDay();
+  const todayStr=todayKey();
+  document.getElementById('cal-month-label').textContent=firstDay.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  let html=['Su','Mo','Tu','We','Th','Fr','Sa'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startDow;i++) html+=`<div class="cal-day cal-other-month"></div>`;
+  for(let day=1;day<=daysInMonth;day++){
+    const dateStr=`${calYear}-${p2(calMonth+1)}-${p2(day)}`;
+    const s=statsMap[dateStr];
+    const total=s?s.parkTotal||s.total:0;
+    const barPct=total?Math.round((total/maxVal)*100):0;
+    const isToday=dateStr===todayStr;const isSel=dateStr===selectedCalDay;
+    const hasData=dataSet.has(dateStr)&&total>0;
+    let cls='cal-day';if(isToday)cls+=' cal-today';if(isSel)cls+=' cal-selected';else if(hasData)cls+=' cal-has-data';
+    html+=`<div class="${cls}" onclick="selectCalDay('${dateStr}')">
+      <div class="cal-day-num">${day}</div>
+      ${total?`<div class="cal-day-count">${total}</div>`:''}
+      <div class="cal-day-bar-wrap"><div class="cal-day-bar" style="width:${barPct}%"></div></div>
+    </div>`;
+  }
+  document.getElementById('cal-grid').innerHTML=html;
+}
+
+function selectCalDay(dateStr){
+  selectedCalDay=selectedCalDay===dateStr?null:dateStr;
+  renderCalendar();
+  const detail=document.getElementById('day-detail');
+  if(selectedCalDay){renderDayDetail(selectedCalDay);detail.style.display='block';}
+  else detail.style.display='none';
+}
+
+function renderDayDetail(dateStr){
+  const d=new Date(dateStr+'T12:00:00');
+  document.getElementById('day-detail-title').textContent=`📅 ${d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}`;
+  let sessHtml='',groupRows='';
+  ['AM','PM'].forEach(sess=>{
+    const cabs=Object.values(getCabanas(dateStr,sess));
+    const active=cabs.filter(c=>c.status!=='available');
+    const guests=active.reduce((s,c)=>s+(+c.count||0),0);
+    let parkCount=0;try{parkCount=parseInt(ls(`cb_parkcount_${dateStr}_${sess}`)||'0');}catch(e){}
+    sessHtml+=`<div class="day-sess-card"><h4>${sess==='AM'?'☀️ Morning':'🌅 Afternoon'}</h4>
+      <div class="day-sess-stat">Cabana Guests <span>${guests}</span></div>
+      <div class="day-sess-stat">Park Headcount <span>${parkCount}</span></div>
+      <div class="day-sess-stat">Booked <span>${active.length}</span></div>
+    </div>`;
+    active.forEach(c=>{
+      const clr=c.server?serverColor(c.server):'#94a3b8';
+      const bMap={reserved:'🔶',checkedin:'✅',paid:'💚',available:'⬜'};
+      groupRows+=`<div class="day-group-item">
+        <div class="day-group-dot" style="background:${clr}"></div>
+        <span style="flex:1">${c.label}${c.group?' — '+c.group:''}</span>
+        <span style="color:var(--sub);font-size:.68rem">${bMap[c.status]||''} ${sess}</span>
+        ${c.count?`<span style="color:var(--ocean);font-weight:900">👥 ${c.count}</span>`:''}
+      </div>`;
+    });
+  });
+  document.getElementById('day-sess-row').innerHTML=sessHtml;
+  document.getElementById('day-group-list').innerHTML=groupRows||`<div style="color:var(--sub);font-size:.78rem;font-style:italic;padding:6px 0">No bookings for this day</div>`;
+}
+
+// ═══════════════════════════════════════
+// VIEW SWITCH
+// ═══════════════════════════════════════
+function switchView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById(`${v}-view`).classList.add('active');
+  ['manager','kitchen','tv','headcount','breakroom','reports'].forEach(t=>{const el=document.getElementById(`tab-${t}`);if(el)el.classList.toggle('active',t===v);});
+  if(v==='tv'){renderTV();}
+  if(v==='kitchen'){renderKitchen();}
+  if(v==='reports'){renderReports();}
+  if(v==='headcount'){renderHeadcount();}
+  if(v==='breakroom'){renderBreakroom();}
+}
+document.getElementById('overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+// ═══════════════════════════════════════
+// CLOCK + TIMERS
+// ═══════════════════════════════════════
+function tick(){document.getElementById('clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+setInterval(tick,10000);tick();
+setInterval(updateCountdown,30000);updateCountdown();
+setInterval(()=>{if(document.getElementById('tv-view').classList.contains('active'))renderTV();},15000);
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+servers=loadServers();prices=loadPrices();customLabels=loadCustomLabels();
+managerSettings=loadManagerSettings();
+loadSharedState();
+const savedTheme=ls('cb_theme')||'light';
+document.documentElement.setAttribute('data-theme',savedTheme);
+document.getElementById('theme-btn').textContent=savedTheme==='dark'?'☀️':'🌙';
+// Restore page-specific dark modes
+kitchenDark=ls('cb_kitchen_dark')==='1';
+breakroomDark=(ls('cb_breakroom_dark')||'1')==='1'; // default dark for break room
+headcountDark=ls('cb_headcount_dark')==='1';
+if(!kitchenDark){const kv=document.getElementById('kitchen-view');if(kv)kv.classList.add('k-light');}
+if(!breakroomDark){const bv=document.getElementById('breakroom-view');if(bv){bv.classList.remove('br-dark');bv.classList.add('br-light');}}
+if(!headcountDark){const hv=document.getElementById('headcount-view');if(hv)hv.classList.add('hc-light');}
+updateDateLabel();loadShiftNotes();render();
+fetchWeather();
+initSupabase();
+</script>
+</body>
+</html>
