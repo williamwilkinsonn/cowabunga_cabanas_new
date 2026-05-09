@@ -1299,6 +1299,7 @@ const ROLE_VIEWS={
   guest_service:['breakroom']
 };
 const ROLE_LABELS={manager:'Manager',kitchen:'Kitchen',front_gate:'Front Gate',guest_service:'Guest Service'};
+const INITIAL_MANAGER_EMAILS=['cabanabook@cowabungabay.com'];
 
 function initFirebase(){
   try{
@@ -1339,19 +1340,28 @@ async function ensureUserProfile(user){
   const userRef=fbDb.collection('users').doc(user.uid);
   const snap=await userRef.get();
   if(!snap.exists){
-    const role=await isFirstUser()? 'manager':'guest_service';
-    const profile={uid:user.uid,email:user.email||'',role,displayName:user.displayName||'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-    await userRef.set(profile,{merge:true});
+    const normalizedEmail=(user.email||'').toLowerCase();
+    const profile=await fbDb.runTransaction(async tx=>{
+      const fresh=await tx.get(userRef);
+      if(fresh.exists) return fresh.data();
+      const bootstrapRef=fbDb.collection('settings').doc('bootstrap');
+      const bootstrapSnap=await tx.get(bootstrapRef);
+      const managerAlreadySet=bootstrapSnap.exists&&!!bootstrapSnap.data()?.managerAssigned;
+      const canBootstrapManager=!managerAlreadySet&&INITIAL_MANAGER_EMAILS.includes(normalizedEmail);
+      const role=canBootstrapManager?'manager':'guest_service';
+      const now=new Date().toISOString();
+      const profileData={uid:user.uid,email:user.email||'',role,displayName:user.displayName||'',createdAt:now,updatedAt:now};
+      tx.set(userRef,profileData,{merge:true});
+      if(canBootstrapManager){
+        tx.set(bootstrapRef,{managerAssigned:true,managerUid:user.uid,managerEmail:normalizedEmail,assignedAt:now},{merge:true});
+      }
+      return profileData;
+    });
     currentUserProfile=profile;
   }else{
     currentUserProfile=snap.data();
   }
   currentUserRole=currentUserProfile.role||'guest_service';
-}
-
-async function isFirstUser(){
-  const q=await fbDb.collection('users').limit(1).get();
-  return q.empty;
 }
 
 async function checkPassword(){
@@ -1524,7 +1534,8 @@ async function sbSyncSession(data,date,sess){
       const cref=fbDb.collection('cabanas').doc(`${sid}_${cabanaId}`);
       batch.set(cref,{date:d,session:s,cabanaId,data:cabana||{},updatedAt:stamp,updatedBy:currentUid},{merge:true});
       (cabana?.lateArrivals||[]).forEach((la,idx)=>{
-        const lref=fbDb.collection('late_arrivals').doc(`${sid}_${cabanaId}_${idx}`);
+        const stableId=lateArrivalId(la,idx);
+        const lref=fbDb.collection('late_arrivals').doc(`${sid}_${cabanaId}_${stableId}`);
         batch.set(lref,{date:d,session:s,cabanaId,name:la.name||'',ticketType:la.ticketType||'',arrivedAt:la.arrivedAt||null,updatedAt:stamp,updatedBy:currentUid},{merge:true});
       });
     });
@@ -1661,10 +1672,12 @@ async function renderUserAdmin(){
       const selfMark=doc.id===currentUid?' <span style="font-size:.62rem;color:var(--sub)">(You)</span>':'';
       return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--dim);border:1px solid var(--border);border-radius:8px;padding:7px 8px;">
         <div style="font-size:.75rem;font-weight:800;min-width:180px;flex:1;">${u.email||'(no email)'}${selfMark}</div>
-        <select onchange="updateUserRole('${doc.id}',this.value)" style="padding:5px 7px;border:2px solid var(--border);border-radius:7px;background:var(--input-bg);font-weight:700;">${opts}</select>
-        <button class="toolbar-btn" type="button" onclick="sendResetForUser('${(u.email||'').replace(/'/g,"&#39;")}')">Reset PW</button>
+        <select class="user-role-select" data-uid="${doc.id}" title="${doc.id===currentUid?'Your own role cannot be changed from this panel':''}" style="padding:5px 7px;border:2px solid var(--border);border-radius:7px;background:var(--input-bg);font-weight:700;" ${doc.id===currentUid?'disabled aria-label="Current user role (locked)"':''}>${opts}</select>
+        <button class="toolbar-btn user-reset-btn" type="button" data-email="${encodeURIComponent(u.email||'')}">Reset PW</button>
       </div>`;
     }).join('')||'<div style="font-size:.72rem;color:var(--sub)">No users found.</div>';
+    list.querySelectorAll('.user-role-select').forEach(el=>el.addEventListener('change',()=>updateUserRole(el.dataset.uid,el.value)));
+    list.querySelectorAll('.user-reset-btn').forEach(el=>el.addEventListener('click',()=>sendResetForUser(decodeURIComponent(el.dataset.email||''))));
   }catch(e){console.warn('renderUserAdmin:',e);}
 }
 
@@ -1681,10 +1694,10 @@ async function createManagedUser(){
   const password=document.getElementById('new-user-password')?.value||'';
   const role=document.getElementById('new-user-role')?.value||'guest_service';
   if(!email||!password){setUserAdminMessage('Enter email and temporary password.',true);return;}
-  const appName=`manager-create-${Date.now()}`;
+  const secondaryAuthAppName=`manager-create-${Date.now()}`;
   let secApp;
   try{
-    secApp=firebase.initializeApp(firebaseConfig,appName);
+    secApp=firebase.initializeApp(firebaseConfig,secondaryAuthAppName);
     const secAuth=secApp.auth();
     const cred=await secAuth.createUserWithEmailAndPassword(email,password);
     await fbDb.collection('users').doc(cred.user.uid).set({uid:cred.user.uid,email,role,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:currentUid},{merge:true});
@@ -1694,15 +1707,15 @@ async function createManagedUser(){
     document.getElementById('new-user-password').value='';
     await renderUserAdmin();
   }catch(e){console.warn('createManagedUser:',e);setUserAdminMessage('Failed to create user. Email may already exist.',true);}
-  finally{try{secApp&&await secApp.delete();}catch(e){}}
+  finally{try{secApp&&await secApp.delete();}catch(e){console.warn('secondary app cleanup failed:',e);}}
 }
 
 async function updateUserRole(uid,role){
   if(currentUserRole!=='manager'||!fbDb) return;
+  if(uid===currentUid){setUserAdminMessage('You cannot change your own role for security reasons.',true);await renderUserAdmin();return;}
   try{
     await fbDb.collection('users').doc(uid).set({role,updatedAt:new Date().toISOString(),updatedBy:currentUid},{merge:true});
     setUserAdminMessage('Role updated.',false);
-    if(uid===currentUid){currentUserRole=role;applyRoleAccess(currentUserRole);if(!canAccessView('manager'))switchView(defaultViewForRole(currentUserRole));}
   }catch(e){console.warn('updateUserRole:',e);setUserAdminMessage('Could not update role.',true);}
 }
 
@@ -1711,6 +1724,11 @@ async function sendResetForUser(email){
   try{await fbAuth.sendPasswordResetEmail(email);setUserAdminMessage(`Reset email sent to ${email}.`,false);}catch(e){setUserAdminMessage('Failed to send reset email.',true);}
 }
 
+/**
+ * Migration utility: export core Supabase tables as one JSON file.
+ * @param {string} supabaseUrl Supabase project URL
+ * @param {string} supabaseAnonKey Supabase anon/service key used for REST export
+ */
 async function exportSupabaseData(supabaseUrl,supabaseAnonKey){
   const tables=['users','cabana_sessions','servers_list','prices_config','shift_notes','app_state'];
   const out={};
@@ -1725,6 +1743,11 @@ async function exportSupabaseData(supabaseUrl,supabaseAnonKey){
   a.click();
 }
 
+/**
+ * Migration utility: import Supabase-exported payload into Firebase collections.
+ * Expected keys: users, cabana_sessions, servers_list, prices_config, shift_notes, app_state.
+ * @param {Record<string, any[]>} payload Parsed Supabase export JSON
+ */
 async function importFirebaseMigration(payload){
   if(currentUserRole!=='manager'||!fbDb) throw new Error('Manager access required');
   const bySession={};
@@ -1745,6 +1768,11 @@ window.addEventListener('online',()=>setSyncChip('online'));
 window.addEventListener('offline',()=>setSyncChip('offline'));
 
 // ═══════════════════════════════════════
+function lateArrivalId(la,idx){
+  if(la&&la.id) return String(la.id).replace(/[^a-zA-Z0-9_-]/g,'');
+  return `la_${idx}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
+}
+
 function blankCab(id,section,label){
   return {id,section,label,group:'',count:'',server:'',status:'available',
     eventType:'',seasonPass:false,allDay:false,linkedGroup:'',
@@ -1781,7 +1809,14 @@ function lighten(hex){try{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.sli
 // ═══════════════════════════════════════
 // DATE / SESSION
 // ═══════════════════════════════════════
-function changeDay(d){const dt=new Date(currentDate+'T12:00:00');dt.setDate(dt.getDate()+d);currentDate=dt.toISOString().slice(0,10);updateDateLabel();if(currentUid)initFirebaseSync();render();}
+function changeDay(d){
+  const dt=new Date(currentDate+'T12:00:00');
+  dt.setDate(dt.getDate()+d);
+  currentDate=dt.toISOString().slice(0,10);
+  updateDateLabel();
+  if(currentUid) initFirebaseSync();
+  render();
+}
 function setSession(s){currentSession=s;document.getElementById('btn-am').classList.toggle('active',s==='AM');document.getElementById('btn-pm').classList.toggle('active',s==='PM');loadShiftNotes();render();}
 function updateDateLabel(){const d=new Date(currentDate+'T12:00:00');document.getElementById('date-label').textContent=currentDate===todayKey()?'Today':d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 
@@ -2543,7 +2578,7 @@ function openModal(id){
   document.getElementById('wb-meal-section').style.display=c.wristbandColor==='meal-dessert'?'block':'none';
   document.querySelectorAll('.wb-meal-btn').forEach(b=>b.classList.toggle('selected',b.dataset.meal===c.wristbandMealType));
   // Late arrivals
-  modalLateArrivals=[...(c.lateArrivals||[])];
+  modalLateArrivals=[...(c.lateArrivals||[])].map((la,i)=>({id:la.id||lateArrivalId(la,i),name:la.name||'',ticketType:la.ticketType||'Over 48"',arrivedAt:la.arrivedAt||null}));
   renderLateArrivalsModal();
   updateDessertUI();updateAllergyUI();
   const al=document.getElementById('f-allergy');
@@ -2662,7 +2697,7 @@ function addLateArrival(){
   const typeEl=document.getElementById('late-type-input');
   const name=nameEl?.value.trim();
   if(!name) return;
-  modalLateArrivals.push({name,ticketType:typeEl.value,arrivedAt:null});
+  modalLateArrivals.push({id:lateArrivalId(null,modalLateArrivals.length),name,ticketType:typeEl.value,arrivedAt:null});
   nameEl.value='';
   renderLateArrivalsModal();
 }
