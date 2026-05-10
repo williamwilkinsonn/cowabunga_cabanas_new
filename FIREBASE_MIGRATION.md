@@ -12,6 +12,9 @@
 - `settings` (global prices + manager/shared state)
 - `sessions` (daily/session tracking)
 - `late_arrivals` (late-joiner tracking)
+- `weather/current` (latest One Call payload + timestamp)
+- `settings/weather` (weather API key + refresh and alert preferences)
+- `alerts/weather` (active lightning/severe/heat alerts + timestamps)
 
 ## 3. Export from Supabase
 From browser console in the app:

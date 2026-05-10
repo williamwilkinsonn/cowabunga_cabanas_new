@@ -43,6 +43,16 @@ service cloud.firestore {
       allow read: if signedIn();
       allow write: if isManager() || isKitchen();
     }
+
+    match /weather/{id} {
+      allow read: if signedIn();
+      allow write: if isManager() || isKitchen();
+    }
+
+    match /alerts/{id} {
+      allow read: if signedIn();
+      allow write: if isManager() || isKitchen();
+    }
   }
 }
 ```

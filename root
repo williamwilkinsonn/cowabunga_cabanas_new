@@ -52,7 +52,9 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
 .sync-chip{background:rgba(255,255,255,.12);border-radius:6px;padding:3px 8px;font-size:.62rem;font-weight:800;color:rgba(255,255,255,.7);white-space:nowrap;display:flex;align-items:center;gap:3px;flex-shrink:0;transition:background .3s,color .3s;}
 
 /* Weather */
-.weather-chip{background:rgba(255,255,255,.12);border-radius:6px;padding:3px 8px;font-size:.7rem;font-weight:800;color:white;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:3px;flex-shrink:0;}
+.weather-chip{background:rgba(255,255,255,.12);border-radius:6px;padding:3px 8px;font-size:.7rem;font-weight:800;color:white;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:3px;flex-shrink:0;border:none;font-family:'Nunito',sans-serif;}
+.weather-chip.stale{background:rgba(245,158,11,.25);color:#fde68a;}
+.weather-chip.error{background:rgba(239,68,68,.25);color:#fecaca;}
 
 /* Search */
 .search-wrap{flex:1;max-width:180px;position:relative;}
@@ -515,6 +517,26 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
 .hw-light .hw-item{background:rgba(0,119,182,.07);border-color:rgba(0,119,182,.15);}
 .hw-light .hw-time{color:var(--sub);}
 .hw-light .hw-temp{color:var(--text);}
+.hw-prob{font-size:.56rem;font-weight:800;color:var(--sub);}
+.weather-current-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:var(--dim);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:7px;}
+.weather-summary-main{font-size:.84rem;font-weight:800;color:var(--text);}
+.weather-summary-sub{font-size:.66rem;font-weight:700;color:var(--sub);}
+.weather-badge-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.w-badge{padding:4px 8px;border-radius:999px;font-size:.66rem;font-weight:800;border:1.5px solid;display:inline-flex;align-items:center;gap:4px;}
+.w-badge.uv-green{background:#dcfce7;color:#166534;border-color:#86efac;}
+.w-badge.uv-yellow{background:#fef9c3;color:#854d0e;border-color:#facc15;}
+.w-badge.uv-orange{background:#ffedd5;color:#9a3412;border-color:#fb923c;}
+.w-badge.uv-red{background:#fee2e2;color:#991b1b;border-color:#f87171;}
+.w-badge.uv-purple{background:#f3e8ff;color:#6b21a8;border-color:#c084fc;}
+.w-badge.default{background:var(--dim);color:var(--text);border-color:var(--border);}
+.w-badge.warn{background:#fff7ed;color:#9a3412;border-color:#fdba74;}
+.weather-alerts{display:flex;flex-direction:column;gap:5px;margin-bottom:8px;}
+.weather-alert{padding:7px 10px;border-radius:8px;font-size:.72rem;font-weight:800;border:2px solid;}
+.weather-alert.lightning{background:#dbeafe;color:#1e3a8a;border-color:#60a5fa;}
+.weather-alert.severe{background:#fee2e2;color:#991b1b;border-color:#f87171;}
+.weather-alert.heat{background:#ffedd5;color:#9a3412;border-color:#fb923c;}
+.k-weather-bar{display:none;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);font-size:.74rem;font-weight:800;color:rgba(255,255,255,.88);}
+#kitchen-view.k-light .k-weather-bar{background:var(--panel-bg);border-color:var(--border);color:var(--text);}
 
 /* ═══════════════════════ LATE ARRIVALS ═══════════════════════ */
 .late-arr-item{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--dim);border-radius:8px;margin-bottom:4px;font-size:.76rem;font-weight:700;color:var(--text);flex-wrap:wrap;}
@@ -557,6 +579,8 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
 .threshold-item label{font-size:.68rem;font-weight:800;color:var(--text);}
 .threshold-item input{width:52px;padding:4px 6px;border:2px solid var(--border);border-radius:6px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;color:var(--text);background:var(--input-bg);text-align:center;}
 .threshold-item input:focus{outline:none;border-color:var(--sky);}
+.threshold-item select{padding:4px 6px;border:2px solid var(--border);border-radius:6px;font-family:'Nunito',sans-serif;font-size:.74rem;font-weight:800;color:var(--text);background:var(--input-bg);}
+#weather-api-key,#weather-manual-value{width:100%;text-align:left;min-width:160px;}
 
 /* Peak indicator */
 .peak-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:.65rem;font-weight:800;}
@@ -752,7 +776,8 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
     <input type="text" id="search-input" placeholder="Search groups…" oninput="doSearch(this.value)">
   </div>
 
-  <div class="weather-chip" id="weather-chip" onclick="fetchWeather()" title="Click to refresh">🌤 —</div>
+  <button class="weather-chip" id="weather-chip" onclick="toggleWeatherDetails()" title="Weather details" aria-label="Toggle weather details">🌤 —</button>
+  <button class="icon-btn" id="weather-refresh-btn" onclick="fetchWeather(true)" title="Refresh weather now" aria-label="Refresh weather now">↻</button>
 
   <div class="sync-chip" id="sync-chip" title="Firebase sync status">⏳ Connecting…</div>
 
@@ -776,7 +801,7 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
 <div id="manager-view" class="view active">
 
   <!-- Lightning Banner -->
-  <div class="lightning-banner" id="mgr-lightning-banner">
+  <div class="lightning-banner" id="mgr-lightning-banner" role="alert" aria-live="assertive">
     <div class="lightning-banner-text">⚡ LIGHTNING IN FORECAST — MONITOR CONDITIONS CLOSELY ⚡</div>
   </div>
 
@@ -828,6 +853,68 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
             <input type="number" id="thresh-second" min="1" max="100" placeholder="90" oninput="saveManagerSettings()">
             <span style="font-size:.72rem;color:var(--sub);font-weight:700">%</span>
           </div>
+        </div>
+      </div>
+      <!-- Weather Controls -->
+      <div class="settings-section">
+        <div class="settings-section-title">🌤 Weather Controls</div>
+        <div class="threshold-row" style="margin-bottom:8px;">
+          <div class="threshold-item" style="flex:1;min-width:240px;align-items:center;">
+            <label for="weather-api-key">API Key</label>
+            <input type="password" id="weather-api-key" placeholder="OpenWeatherMap One Call 3.0 key" oninput="saveWeatherSettings()" aria-label="Weather API key">
+          </div>
+          <div class="threshold-item">
+            <label for="weather-refresh-mins">Refresh</label>
+            <select id="weather-refresh-mins" onchange="saveWeatherSettings()" aria-label="Weather refresh frequency">
+              <option value="2">2 min</option>
+              <option value="3">3 min</option>
+              <option value="5">5 min</option>
+            </select>
+          </div>
+          <div class="threshold-item">
+            <label for="weather-units">Units</label>
+            <select id="weather-units" onchange="saveWeatherSettings()" aria-label="Temperature units">
+              <option value="imperial">°F</option>
+              <option value="metric">°C</option>
+            </select>
+          </div>
+        </div>
+        <div class="threshold-row" style="margin-bottom:8px;">
+          <div class="threshold-item">
+            <label class="toggle"><input type="checkbox" id="weather-alert-lightning" onchange="saveWeatherSettings()"><span class="toggle-slider"></span></label>
+            <span style="font-size:.68rem;font-weight:800;">Lightning Alerts</span>
+          </div>
+          <div class="threshold-item">
+            <label class="toggle"><input type="checkbox" id="weather-alert-severe" onchange="saveWeatherSettings()"><span class="toggle-slider"></span></label>
+            <span style="font-size:.68rem;font-weight:800;">Severe Alerts</span>
+          </div>
+          <div class="threshold-item">
+            <label class="toggle"><input type="checkbox" id="weather-alert-heat" onchange="saveWeatherSettings()"><span class="toggle-slider"></span></label>
+            <span style="font-size:.68rem;font-weight:800;">High Heat Alerts</span>
+          </div>
+        </div>
+        <div class="threshold-row" style="margin-bottom:8px;">
+          <div class="threshold-item">
+            <label class="toggle"><input type="checkbox" id="weather-manual-override-on" onchange="saveWeatherSettings()"><span class="toggle-slider"></span></label>
+            <span style="font-size:.68rem;font-weight:800;">Manual Override</span>
+          </div>
+          <div class="threshold-item" style="flex:1;min-width:210px;">
+            <label for="weather-manual-value">Override (99|Extreme Heat|🔥)</label>
+            <input type="text" id="weather-manual-value" placeholder="temp|condition|icon" oninput="saveWeatherSettings()" aria-label="Manual weather override">
+          </div>
+          <div class="threshold-item">
+            <label for="weather-session-override">Session</label>
+            <select id="weather-session-override" onchange="saveWeatherSettings()" aria-label="Session override">
+              <option value="auto">Auto</option>
+              <option value="AM">Morning</option>
+              <option value="PM">Afternoon</option>
+              <option value="PRIVATE">Private</option>
+              <option value="NONE">None</option>
+            </select>
+          </div>
+        </div>
+        <div class="threshold-row">
+          <button class="toolbar-btn" onclick="clearWeatherCache()" type="button" aria-label="Clear weather cache">🧹 Clear Weather Cache</button>
         </div>
       </div>
       <!-- 607 Indicator -->
@@ -895,8 +982,11 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
 
   <!-- Hourly Weather Strip (Manager) -->
   <div class="panel" id="mgr-weather-panel" style="display:none">
-    <div class="panel-hdr"><h3>🌤 Hourly Forecast</h3><span class="panel-hint">Draper, UT</span></div>
-    <div class="hourly-weather hw-light" id="mgr-hourly-weather"></div>
+    <div class="panel-hdr"><h3>🌤 Weather Forecast</h3><span class="panel-hint" id="mgr-weather-session">Draper, UT</span></div>
+    <div id="mgr-weather-current" class="weather-current-row">Loading weather…</div>
+    <div id="mgr-weather-badges" class="weather-badge-row"></div>
+    <div id="mgr-weather-alerts" class="weather-alerts"></div>
+    <div class="hourly-weather hw-light" id="mgr-hourly-weather" aria-label="Weather forecast timeline"></div>
   </div>
 
   <!-- Shift Notes -->
@@ -953,6 +1043,10 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
     <div class="k-allergy-title">⚠️ Active Allergies</div>
     <div class="k-allergy-list" id="k-allergy-list"></div>
   </div>
+  <div class="lightning-banner" id="k-lightning-banner" role="alert" aria-live="assertive">
+    <div class="lightning-banner-text">⚡ LIGHTNING IN FORECAST — NOTIFY MANAGEMENT IMMEDIATELY ⚡</div>
+  </div>
+  <div class="k-weather-bar" id="k-weather-bar"></div>
   <!-- Hourly weather strip -->
   <div style="margin-bottom:10px;display:none" id="k-weather-wrap">
     <div class="hourly-weather" id="k-hourly-weather"></div>
@@ -963,7 +1057,7 @@ body{font-family:'Nunito',sans-serif;background:var(--page-bg);color:var(--text)
 <!-- ═══════════════ TV VIEW ═══════════════ -->
 <div id="tv-view" class="view">
   <!-- Lightning Banner -->
-  <div class="lightning-banner" id="tv-lightning-banner">
+  <div class="lightning-banner" id="tv-lightning-banner" role="alert" aria-live="assertive">
     <div class="lightning-banner-text">⚡ LIGHTNING IN FORECAST — POOL CLOSURE MAY BE REQUIRED ⚡</div>
   </div>
   <div class="tv-controls">
@@ -1438,7 +1532,12 @@ const WB_COLORS={
   yellow:     {css:'#eab308',border:'#ca8a04',label:'Yellow'},
   'meal-dessert':{css:'linear-gradient(135deg,#f97316,#a855f7)',border:'#a855f7',label:'Meal/Dessert'},
 };
-const SESSION_TIMES={AM:{start:'10:30',end:'14:00'},PM:{start:'14:30',end:'18:00'}};
+const SESSION_TIMES={AM:{start:'10:30',end:'14:00'},PM:{start:'14:30',end:'18:00'},PRIVATE:{start:'18:30',end:'21:30'}};
+const WEATHER_LOCATION={name:'Draper, UT',lat:40.5523,lon:-111.8945,address:'12047 S State Street, Draper, UT 84020'};
+const WEATHER_CACHE_KEY='cb_weather_cache_v1';
+const WEATHER_CACHE_MS=5*60*1000;
+const WEATHER_DEFAULT_REFRESH_MS=3*60*1000;
+const WEATHER_MAX_HOURS=48;
 
 // ═══════════════════════════════════════
 // STATE
@@ -1450,15 +1549,15 @@ let modalId=null,modalStatus='available',isFunModal=false;
 let undoStack=null;
 let tvScrollInterval=null,tvZoomOn=false;
 let reportPeriod='week',calYear=new Date().getFullYear(),calMonth=new Date().getMonth(),selectedCalDay=null;
-let weatherData=null,hourlyWeatherData=[];
+let weatherData=null,hourlyWeatherData=[],weatherState={current:null,hourly:[],alerts:[],lastUpdated:null,lastError:null,isStale:false,activeSession:'NONE',lightning:{active:false,probability:0,triggeredAt:null}};
 let modalPhotos=[];
 let customLabels={};
 let helpNeeded=false,ordersOn=false;
 let helpItems={pitchers:false,pizzaTrays:false,expediting:false,generalHelp:false,dishes:false};
 let alert607={on:false,location:'Kids Cove'};
-let lightningActive=false;
+let lightningActive=false,weatherPollTimer=null,weatherFetchInFlight=false;
 let kitchenDark=false,breakroomDark=false,headcountDark=false;
-let managerSettings={peakThresholds:{green:50,first:70,second:90},ticketPrices:{over48:25,under48:20,senior:15,spectator:10},showServerStats:false};
+let managerSettings={peakThresholds:{green:50,first:70,second:90},ticketPrices:{over48:25,under48:20,senior:15,spectator:10},showServerStats:false,weather:{apiKey:'',refreshMs:WEATHER_DEFAULT_REFRESH_MS,units:'imperial',alertTypes:{lightning:true,severe:true,heat:true},manualSession:'auto',manualOverride:false,manualValue:''}};
 let modalLateArrivals=[];
 
 // ═══════════════════════════════════════
@@ -1478,7 +1577,29 @@ function loadPrices(){try{const r=ls('cb_prices');return r?JSON.parse(r):{};}cat
 function savePrices(){lss('cb_prices',JSON.stringify(prices));sbSyncPrices();}
 function loadCustomLabels(){try{const r=ls('cb_labels');return r?JSON.parse(r):{};}catch(e){return{};}}
 function saveCustomLabels(){lss('cb_labels',JSON.stringify(customLabels));}
-function loadManagerSettings(){try{const r=ls('cb_mgrsettings');return r?{...managerSettings,...JSON.parse(r)}:managerSettings;}catch(e){return managerSettings;}}
+function normalizeWeatherSettings(ws){
+  const base=managerSettings.weather||{};
+  const inWs=ws||{};
+  return {
+    apiKey:inWs.apiKey??base.apiKey??'',
+    refreshMs:Math.max(120000,Math.min(300000,+(inWs.refreshMs??base.refreshMs??WEATHER_DEFAULT_REFRESH_MS))),
+    units:inWs.units==='metric'?'metric':'imperial',
+    alertTypes:{lightning:inWs.alertTypes?.lightning!==false,severe:inWs.alertTypes?.severe!==false,heat:inWs.alertTypes?.heat!==false},
+    manualSession:['auto','AM','PM','PRIVATE','NONE'].includes(inWs.manualSession)?inWs.manualSession:(base.manualSession||'auto'),
+    manualOverride:!!inWs.manualOverride,
+    manualValue:inWs.manualValue??''
+  };
+}
+function loadManagerSettings(){
+  try{
+    const r=ls('cb_mgrsettings');
+    if(!r) return managerSettings;
+    const parsed=JSON.parse(r)||{};
+    const merged={...managerSettings,...parsed};
+    merged.weather=normalizeWeatherSettings(parsed.weather);
+    return merged;
+  }catch(e){return managerSettings;}
+}
 function saveManagerSettings(){
   const tg=parseInt(document.getElementById('thresh-green')?.value)||managerSettings.peakThresholds.green;
   const t1=parseInt(document.getElementById('thresh-first')?.value)||managerSettings.peakThresholds.first;
@@ -1486,8 +1607,30 @@ function saveManagerSettings(){
   const ss=document.getElementById('setting-show-srv-stats')?.checked??managerSettings.showServerStats;
   managerSettings.peakThresholds={green:tg,first:t1,second:t2};
   managerSettings.showServerStats=ss;
+  managerSettings.weather=normalizeWeatherSettings(managerSettings.weather);
   lss('cb_mgrsettings',JSON.stringify(managerSettings));
   sbSyncKitchenState();
+}
+function saveWeatherSettings(){
+  const refreshMinutes=parseInt(document.getElementById('weather-refresh-mins')?.value||'3');
+  managerSettings.weather=normalizeWeatherSettings({
+    apiKey:(document.getElementById('weather-api-key')?.value||'').trim(),
+    refreshMs:refreshMinutes*60000,
+    units:document.getElementById('weather-units')?.value||'imperial',
+    alertTypes:{
+      lightning:!!document.getElementById('weather-alert-lightning')?.checked,
+      severe:!!document.getElementById('weather-alert-severe')?.checked,
+      heat:!!document.getElementById('weather-alert-heat')?.checked
+    },
+    manualOverride:!!document.getElementById('weather-manual-override-on')?.checked,
+    manualValue:document.getElementById('weather-manual-value')?.value||'',
+    manualSession:document.getElementById('weather-session-override')?.value||'auto'
+  });
+  lss('cb_mgrsettings',JSON.stringify(managerSettings));
+  sbSyncKitchenState();
+  sbSyncWeatherSettings();
+  startWeatherPolling();
+  if((managerSettings.weather.apiKey||'').length>12||!managerSettings.weather.apiKey) fetchWeather(true);
 }
 function loadSharedState(){
   try{const r=ls('cb_shared_state');if(r){const d=JSON.parse(r);helpNeeded=!!d.helpNeeded;ordersOn=!!d.ordersOn;if(d.helpItems)helpItems={...helpItems,...d.helpItems};if(d.alert607)alert607={...alert607,...d.alert607};}}catch(e){}
@@ -1579,12 +1722,45 @@ async function sbSyncKitchenState(){
   }catch(e){console.warn('sbSyncKitchenState:',e);setSyncChip('offline');}
 }
 
+async function sbSyncWeatherSettings(){
+  if(!fbDb||!currentUid) return;
+  try{
+    await fbDb.collection('settings').doc('weather').set({
+      ...managerSettings.weather,
+      updatedAt:new Date().toISOString(),
+      updatedBy:currentUid,
+      location:WEATHER_LOCATION
+    },{merge:true});
+  }catch(e){console.warn('sbSyncWeatherSettings:',e);}
+}
+
+async function sbSyncWeatherCurrent(payload){
+  if(!fbDb||!currentUid||!payload?.current) return;
+  try{
+    await fbDb.collection('weather').doc('current').set({
+      payload,
+      fetchedAt:new Date().toISOString(),
+      location:WEATHER_LOCATION,
+      updatedBy:currentUid
+    },{merge:true});
+    await fbDb.collection('alerts').doc('weather').set({
+      active:weatherState.alerts||[],
+      lightning:weatherState.lightning||{active:false,probability:0,triggeredAt:null},
+      updatedAt:new Date().toISOString(),
+      updatedBy:currentUid
+    },{merge:true});
+  }catch(e){console.warn('sbSyncWeatherCurrent:',e);}
+}
+
 async function sbInitialLoad(){
   if(!fbDb||!currentUid) return;
   try{
-    const [srvSnap,settingsSnap]=await Promise.all([
+    const [srvSnap,settingsSnap,weatherSettingsSnap,weatherCurrentSnap,weatherAlertSnap]=await Promise.all([
       fbDb.collection('servers').doc('current').get(),
-      fbDb.collection('settings').doc('global').get()
+      fbDb.collection('settings').doc('global').get(),
+      fbDb.collection('settings').doc('weather').get(),
+      fbDb.collection('weather').doc('current').get(),
+      fbDb.collection('alerts').doc('weather').get()
     ]);
     if(srvSnap.exists){
       const items=srvSnap.data()?.items;
@@ -1602,6 +1778,21 @@ async function sbInitialLoad(){
         lss('cb_shared_state',JSON.stringify({helpNeeded,ordersOn,helpItems,alert607}));
       }
     }
+    if(weatherSettingsSnap.exists){
+      managerSettings.weather=normalizeWeatherSettings(weatherSettingsSnap.data()||{});
+      lss('cb_mgrsettings',JSON.stringify(managerSettings));
+    }
+    if(weatherCurrentSnap.exists){
+      const weatherPayload=weatherCurrentSnap.data()?.payload;
+      if(weatherPayload){
+        weatherCacheWrite(weatherPayload);
+        applyWeatherPayload(weatherPayload,false,null);
+      }
+    }
+    if(weatherAlertSnap.exists){
+      const wa=weatherAlertSnap.data()||{};
+      if(wa.lightning) weatherState.lightning={...weatherState.lightning,...wa.lightning};
+    }
     for(const sess of ['AM','PM']){
       const snap=await fbDb.collection('sessions').doc(sessionDocId(currentDate,sess)).get();
       if(snap.exists){
@@ -1610,7 +1801,7 @@ async function sbInitialLoad(){
         if(typeof row.shiftNotes==='string') lss(`cb_shiftnotes_${currentDate}_${sess}`,row.shiftNotes||'');
       }
     }
-    render();loadShiftNotes();updateHelpUI();updateOrdersUI();
+    render();loadShiftNotes();updateHelpUI();updateOrdersUI();renderManagerSettingsUI();
     setSyncChip('online');
   }catch(e){console.warn('sbInitialLoad:',e);setSyncChip('offline');}
 }
@@ -1641,6 +1832,30 @@ function initFirebaseSync(){
         if(d.sharedState.alert607) alert607={...alert607,...d.sharedState.alert607};
       }
       updateHelpUI();updateOrdersUI();render();
+    })
+  );
+  fbPrimaryUnsubscribers.push(
+    fbDb.collection('settings').doc('weather').onSnapshot(snap=>{
+      if(!snap.exists) return;
+      managerSettings.weather=normalizeWeatherSettings(snap.data()||{});
+      lss('cb_mgrsettings',JSON.stringify(managerSettings));
+      renderManagerSettingsUI();
+      startWeatherPolling();
+      fetchWeather(true);
+    })
+  );
+  fbPrimaryUnsubscribers.push(
+    fbDb.collection('weather').doc('current').onSnapshot(snap=>{
+      if(!snap.exists) return;
+      const payload=snap.data()?.payload;
+      if(payload) applyWeatherPayload(payload,false,null);
+    })
+  );
+  fbPrimaryUnsubscribers.push(
+    fbDb.collection('alerts').doc('weather').onSnapshot(snap=>{
+      if(!snap.exists) return;
+      const d=snap.data()||{};
+      if(d.lightning){weatherState.lightning={...weatherState.lightning,...d.lightning};updateLightningBanner();}
     })
   );
 
@@ -1853,68 +2068,184 @@ function toggleTheme(){
 // WEATHER
 // ═══════════════════════════════════════
 function weatherCodeIcon(code){
-  if(code<=1) return '☀️';
-  if(code<=3) return '⛅';
-  if(code<=48) return '🌫';
-  if(code<=67) return '🌧';
-  if(code<=77) return '❄️';
-  if(code<=82) return '🌦';
-  return '🌩';
+  if(!code) return '🌤';
+  const iconCode=String(code).toLowerCase();
+  if(iconCode.includes('11')) return '⛈️';
+  if(iconCode.includes('13')) return '❄️';
+  if(iconCode.includes('09')||iconCode.includes('10')) return '🌧️';
+  if(iconCode.includes('50')) return '🌫️';
+  if(iconCode.includes('02')||iconCode.includes('03')||iconCode.includes('04')) return '⛅';
+  return iconCode.includes('n')?'🌙':'☀️';
 }
-
-async function fetchWeather(){
-  const chip=document.getElementById('weather-chip');
-  const tvBar=document.getElementById('tv-weather-bar');
-  chip.textContent='🌤 …';
+function weatherTempUnit(){return (managerSettings?.weather?.units||'imperial')==='metric'?'°C':'°F';}
+function windMph(v){const units=managerSettings?.weather?.units||'imperial';return units==='metric'?Math.round((+v||0)*2.23694):Math.round(+v||0);}
+function uvClass(u){
+  if(u<=2) return 'uv-green';
+  if(u<=5) return 'uv-yellow';
+  if(u<=7) return 'uv-orange';
+  if(u<=10) return 'uv-red';
+  return 'uv-purple';
+}
+function parseManualWeather(){
+  const w=managerSettings?.weather||{};
+  if(!w.manualOverride||!w.manualValue) return null;
+  const [tempRaw,conditionRaw,iconRaw]=(w.manualValue||'').split('|');
+  const temp=parseFloat(tempRaw);
+  if(!Number.isFinite(temp)) return null;
+  return {temp,condition:(conditionRaw||'Manual Override').trim(),icon:(iconRaw||'🧪').trim()};
+}
+function activeWeatherSession(){
+  const override=(managerSettings?.weather?.manualSession||'auto');
+  if(override!=='auto') return override;
+  const n=new Date();
+  const mins=n.getHours()*60+n.getMinutes();
+  const toM=t=>{const [h,m]=t.split(':').map(Number);return h*60+m;};
+  const inRange=(s,e)=>mins>=toM(s)&&mins<toM(e);
+  if(inRange(SESSION_TIMES.AM.start,SESSION_TIMES.AM.end)) return 'AM';
+  if(inRange(SESSION_TIMES.PM.start,SESSION_TIMES.PM.end)) return 'PM';
+  if(inRange(SESSION_TIMES.PRIVATE.start,SESSION_TIMES.PRIVATE.end)) return 'PRIVATE';
+  return 'NONE';
+}
+function weatherCacheRead(){
+  try{const raw=ls(WEATHER_CACHE_KEY);if(!raw) return null;const d=JSON.parse(raw);if(!d?.fetchedAt||!d?.payload) return null;return d;}catch(e){return null;}
+}
+function weatherCacheWrite(payload){
+  lss(WEATHER_CACHE_KEY,JSON.stringify({fetchedAt:Date.now(),payload}));
+}
+function clearWeatherCache(){
+  try{localStorage.removeItem(WEATHER_CACHE_KEY);}catch(e){}
+  fetchWeather(true);
+}
+async function fetchWithRetry(url,attempt=0){
   try{
-    // Draper UT lat/lon — fetch current + hourly (2 days to ensure 10 hours even late in day)
-    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=40.5246&longitude=-111.8638&current_weather=true&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=2&timezone=America%2FDenver');
-    const d=await r.json();
-    const cw=d.current_weather;
-    const icon=weatherCodeIcon(cw.weathercode);
-    const txt=`${icon} ${Math.round(cw.temperature)}°F`;
-    weatherData=txt;
-    chip.textContent=txt;
-
-    // Build hourly data — up to 10 hours ahead
-    hourlyWeatherData=[];
-    lightningActive=false;
-    if(d.hourly&&d.hourly.time){
-      const now=new Date();
-      d.hourly.time.forEach((t,i)=>{
-        const dt=new Date(t);
-        if(dt<now-3600000) return; // skip past hours (allow 1hr back)
-        if(hourlyWeatherData.length>=10) return; // limit to 10 hours
-        const wcode=d.hourly.weathercode[i];
-        if(wcode>=95) lightningActive=true; // thunderstorm codes 95-99
-        hourlyWeatherData.push({
-          time:dt.toLocaleTimeString([],{hour:'numeric',hour12:true}),
-          icon:weatherCodeIcon(wcode),
-          temp:Math.round(d.hourly.temperature_2m[i])
-        });
-      });
-    }
-
-    // Update TV current weather bar
-    if(tvBar) tvBar.innerHTML=`<span>${txt}</span><span style="opacity:.5">Draper, UT</span><span>${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>`;
-
-    // Render hourly strips on all views
-    renderHourlyWeather();
-    // Update lightning banners
-    updateLightningBanner();
-  }catch(e){chip.textContent='🌤 —';}
+    const r=await fetch(url);
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  }catch(e){
+    if(attempt>=2) throw e;
+    await new Promise(res=>setTimeout(res,Math.pow(2,attempt)*900));
+    return fetchWithRetry(url,attempt+1);
+  }
 }
-
+function buildForecastRows(hourly,active){
+  const out=[...hourly];
+  if(!active||out.length<3) return out;
+  const first=out.slice(0,3);
+  const half=(a,b)=>({
+    ts:(a.ts+b.ts)/2,
+    temp:Math.round((a.temp+b.temp)/2),
+    pop:Math.round((a.pop+b.pop)/2),
+    icon:a.icon,
+    condition:a.condition
+  });
+  const merged=[first[0],half(first[0],first[1]),first[1],half(first[1],first[2]),first[2],...out.slice(3)];
+  return merged;
+}
+function applyWeatherPayload(payload,isStale,errorMsg){
+  if(!payload?.current||!Array.isArray(payload?.hourly)) return false;
+  const activeSession=activeWeatherSession();
+  const nowSec=Math.floor(Date.now()/1000)-3600;
+  const rows=payload.hourly.filter(h=>(h.dt||0)>=nowSec).slice(0,WEATHER_MAX_HOURS).map(h=>{
+    const w=(h.weather&&h.weather[0])||{};
+    return {ts:(h.dt||0)*1000,temp:Math.round(h.temp||0),icon:weatherCodeIcon(w.icon),condition:w.main||w.description||'—',pop:Math.round((h.pop||0)*100),weatherId:w.id||0};
+  });
+  const currentW=(payload.current.weather&&payload.current.weather[0])||{};
+  const severeAlerts=(payload.alerts||[]).map(a=>({event:a.event||'Weather Alert',description:a.description||'',start:a.start||payload.current.dt,end:a.end||payload.current.dt}));
+  const lightningProbability=Math.max(0,...rows.slice(0,6).filter(r=>r.weatherId>=200&&r.weatherId<300).map(r=>r.pop));
+  const manual=parseManualWeather();
+  const currentTemp=manual?manual.temp:Math.round(payload.current.temp||0);
+  const currentCondition=manual?manual.condition:(currentW.main||currentW.description||'Weather');
+  const currentIcon=manual?manual.icon:weatherCodeIcon(currentW.icon);
+  const heatAlert=currentTemp>95;
+  const lightningEnabled=managerSettings?.weather?.alertTypes?.lightning!==false;
+  const severeEnabled=managerSettings?.weather?.alertTypes?.severe!==false;
+  const heatEnabled=managerSettings?.weather?.alertTypes?.heat!==false;
+  const lightningNow=lightningEnabled&&lightningProbability>30;
+  if(lightningNow&&!weatherState.lightning.active&&!weatherState.lightning.triggeredAt){
+    weatherState.lightning.triggeredAt=new Date().toISOString();
+  }else if(!lightningNow){
+    weatherState.lightning.triggeredAt=null;
+  }
+  weatherState={
+    current:{
+      temp:currentTemp,
+      feelsLike:Math.round(payload.current.feels_like??currentTemp),
+      condition:currentCondition,
+      icon:currentIcon,
+      humidity:Math.round(payload.current.humidity||0),
+      windMph:windMph(payload.current.wind_speed),
+      uv:Math.round((payload.current.uvi||0)*10)/10
+    },
+    hourly:rows,
+    alerts:[
+      ...(lightningNow?[{type:'lightning',text:`⚡ LIGHTNING IN FORECAST — ${weatherState.lightning.triggeredAt?`Triggered ${new Date(weatherState.lightning.triggeredAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`:'Monitor closely'}`}]:[]),
+      ...(severeEnabled?severeAlerts.map(a=>({type:'severe',text:`⚠️ ${a.event}`})):[]),
+      ...(heatEnabled&&heatAlert?[{type:'heat',text:`🔥 HIGH HEAT WARNING — ${currentTemp}${weatherTempUnit()}`}]:[])
+    ],
+    lastUpdated:new Date((payload.current.dt||Math.floor(Date.now()/1000))*1000).toISOString(),
+    lastError:errorMsg||null,
+    isStale:!!isStale,
+    activeSession,
+    lightning:{active:lightningNow,probability:lightningProbability,triggeredAt:weatherState.lightning.triggeredAt}
+  };
+  lightningActive=weatherState.lightning.active;
+  weatherData=`${weatherState.current.icon} ${weatherState.current.temp}${weatherTempUnit()} ${weatherState.current.condition}`;
+  hourlyWeatherData=buildForecastRows(rows,activeSession!=='NONE').map(h=>({time:new Date(h.ts).toLocaleTimeString([],{hour:'numeric',minute:activeSession!=='NONE'?'2-digit':undefined,hour12:true}),icon:h.icon,temp:h.temp,pop:h.pop}));
+  renderWeatherUI();
+  updateLightningBanner();
+  return true;
+}
 function updateLightningBanner(){
-  const mgrBanner=document.getElementById('mgr-lightning-banner');
-  const tvBanner=document.getElementById('tv-lightning-banner');
-  if(mgrBanner) mgrBanner.classList.toggle('active',lightningActive);
-  if(tvBanner) tvBanner.classList.toggle('active',lightningActive);
+  ['mgr-lightning-banner','tv-lightning-banner','k-lightning-banner'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.toggle('active',weatherState.lightning.active);
+  });
 }
-
+function renderWeatherUI(){
+  const chip=document.getElementById('weather-chip');
+  const mgrPanel=document.getElementById('mgr-weather-panel');
+  const tvBar=document.getElementById('tv-weather-bar');
+  const kBar=document.getElementById('k-weather-bar');
+  const staleTxt=weatherState.isStale?' • stale':'';
+  if(chip){
+    if(!weatherState.current){chip.textContent='🌤 —';return;}
+    chip.textContent=`${weatherState.current.icon} ${weatherState.current.temp}${weatherTempUnit()} ${weatherState.current.condition}${staleTxt}`;
+    chip.classList.toggle('stale',weatherState.isStale);
+    chip.classList.toggle('error',!!weatherState.lastError);
+  }
+  if(!weatherState.current) return;
+  if(mgrPanel) mgrPanel.style.display='block';
+  const sessionLabel={AM:'Morning Session (30-min)',PM:'Afternoon Session (30-min)',PRIVATE:'Private Event (30-min)',NONE:'Outside Session (Hourly)'}[weatherState.activeSession]||'Forecast';
+  const updated=`Updated ${new Date(weatherState.lastUpdated||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}${weatherState.isStale?' · stale':''}`;
+  const mgrSession=document.getElementById('mgr-weather-session');
+  if(mgrSession) mgrSession.textContent=`${WEATHER_LOCATION.name} • ${sessionLabel}`;
+  const cur=document.getElementById('mgr-weather-current');
+  if(cur) cur.innerHTML=`<div class="weather-summary-main">${weatherState.current.icon} ${weatherState.current.temp}${weatherTempUnit()} · Feels ${weatherState.current.feelsLike}${weatherTempUnit()} · ${weatherState.current.condition}</div><div class="weather-summary-sub">${updated}</div>`;
+  const badges=document.getElementById('mgr-weather-badges');
+  if(badges){
+    const nextPop=hourlyWeatherData[0]?.pop||0;
+    badges.innerHTML=`
+      <span class="w-badge ${uvClass(weatherState.current.uv)}">UV ${weatherState.current.uv}</span>
+      <span class="w-badge ${weatherState.current.windMph>15?'warn':'default'}">💨 ${weatherState.current.windMph} mph</span>
+      <span class="w-badge default">🌧 ${nextPop}% rain</span>
+      <span class="w-badge default">💧 ${weatherState.current.humidity}%</span>`;
+  }
+  const alertsEl=document.getElementById('mgr-weather-alerts');
+  if(alertsEl){
+    alertsEl.innerHTML=weatherState.alerts.map(a=>`<div class="weather-alert ${a.type}">${a.text}</div>`).join('');
+  }
+  if(tvBar){
+    tvBar.innerHTML=`<span>${weatherState.current.icon} ${weatherState.current.temp}${weatherTempUnit()} · ${weatherState.current.condition}</span><span style="opacity:.7">${WEATHER_LOCATION.name}</span><span style="opacity:.7">${sessionLabel}</span>`;
+  }
+  if(kBar){
+    kBar.style.display='flex';
+    kBar.innerHTML=`<span>${weatherState.current.icon} ${weatherState.current.temp}${weatherTempUnit()} · ${weatherState.current.condition}</span><span>UV ${weatherState.current.uv} · Wind ${weatherState.current.windMph} mph · Rain ${hourlyWeatherData[0]?.pop||0}%</span>`;
+  }
+  renderHourlyWeather();
+}
 function renderHourlyWeather(){
   if(!hourlyWeatherData.length) return;
-  const html=hourlyWeatherData.map(h=>`<div class="hw-item"><div class="hw-time">${h.time}</div><div class="hw-icon">${h.icon}</div><div class="hw-temp">${h.temp}°</div></div>`).join('');
+  const html=hourlyWeatherData.map(h=>`<div class="hw-item"><div class="hw-time">${h.time}</div><div class="hw-icon">${h.icon}</div><div class="hw-temp">${h.temp}${weatherTempUnit()}</div><div class="hw-prob">${h.pop}%</div></div>`).join('');
   const mgrEl=document.getElementById('mgr-hourly-weather');
   const mgrPanel=document.getElementById('mgr-weather-panel');
   if(mgrEl){mgrEl.innerHTML=html;if(mgrPanel)mgrPanel.style.display='block';}
@@ -1924,6 +2255,48 @@ function renderHourlyWeather(){
   const tvEl=document.getElementById('tv-hourly-weather');
   const tvWrap=document.getElementById('tv-hourly-wrap');
   if(tvEl){tvEl.innerHTML=html;if(tvWrap)tvWrap.style.display='block';}
+}
+function toggleWeatherDetails(){
+  const isManager=document.getElementById('manager-view').classList.contains('active');
+  if(!isManager) switchView('manager');
+  const panel=document.getElementById('mgr-weather-panel');
+  if(panel){panel.style.display=panel.style.display==='none'?'block':'none';}
+}
+async function fetchWeather(force){
+  if(weatherFetchInFlight) return;
+  const chip=document.getElementById('weather-chip');
+  if(chip) chip.textContent='🌤 …';
+  const now=Date.now();
+  const cache=weatherCacheRead();
+  if(!force&&cache&&(now-cache.fetchedAt)<WEATHER_CACHE_MS){
+    applyWeatherPayload(cache.payload,false,null);
+    return;
+  }
+  const apiKey=(managerSettings?.weather?.apiKey||'').trim();
+  if(!apiKey){
+    if(cache?.payload){applyWeatherPayload(cache.payload,true,'Missing API key');return;}
+    if(chip){chip.textContent='⚠️ Set weather API key';chip.classList.add('error');}
+    return;
+  }
+  weatherFetchInFlight=true;
+  try{
+    const units=managerSettings?.weather?.units||'imperial';
+    const url=`https://api.openweathermap.org/data/3.0/onecall?lat=${WEATHER_LOCATION.lat}&lon=${WEATHER_LOCATION.lon}&appid=${encodeURIComponent(apiKey)}&units=${units}`;
+    const payload=await fetchWithRetry(url);
+    weatherCacheWrite(payload);
+    applyWeatherPayload(payload,false,null);
+    sbSyncWeatherCurrent(payload);
+  }catch(e){
+    if(cache?.payload){applyWeatherPayload(cache.payload,true,'Using cached weather');}
+    else if(chip){chip.textContent='🌤 unavailable';chip.classList.add('error');}
+  }finally{
+    weatherFetchInFlight=false;
+  }
+}
+function startWeatherPolling(){
+  if(weatherPollTimer){clearInterval(weatherPollTimer);weatherPollTimer=null;}
+  const ms=Math.max(120000,Math.min(300000,+managerSettings?.weather?.refreshMs||WEATHER_DEFAULT_REFRESH_MS));
+  weatherPollTimer=setInterval(()=>fetchWeather(false),ms);
 }
 
 // ═══════════════════════════════════════
@@ -2134,6 +2507,25 @@ function renderManagerSettingsUI(){
   if(chk607) chk607.checked=!!alert607.on;
   const loc607=document.getElementById('setting-607-location');
   if(loc607) loc607.value=alert607.location||'Kids Cove';
+  const ws=normalizeWeatherSettings(managerSettings.weather);
+  const apiKeyEl=document.getElementById('weather-api-key');
+  const refreshEl=document.getElementById('weather-refresh-mins');
+  const unitsEl=document.getElementById('weather-units');
+  const lightEl=document.getElementById('weather-alert-lightning');
+  const severeEl=document.getElementById('weather-alert-severe');
+  const heatEl=document.getElementById('weather-alert-heat');
+  const mOnEl=document.getElementById('weather-manual-override-on');
+  const mValEl=document.getElementById('weather-manual-value');
+  const sEl=document.getElementById('weather-session-override');
+  if(apiKeyEl&&document.activeElement!==apiKeyEl) apiKeyEl.value=ws.apiKey||'';
+  if(refreshEl) refreshEl.value=String(Math.round((ws.refreshMs||WEATHER_DEFAULT_REFRESH_MS)/60000));
+  if(unitsEl) unitsEl.value=ws.units||'imperial';
+  if(lightEl) lightEl.checked=ws.alertTypes.lightning!==false;
+  if(severeEl) severeEl.checked=ws.alertTypes.severe!==false;
+  if(heatEl) heatEl.checked=ws.alertTypes.heat!==false;
+  if(mOnEl) mOnEl.checked=!!ws.manualOverride;
+  if(mValEl&&document.activeElement!==mValEl) mValEl.value=ws.manualValue||'';
+  if(sEl) sEl.value=ws.manualSession||'auto';
 }
 
 function toggleMgrSettings(){
@@ -2513,7 +2905,7 @@ function renderTV(cabs){
     if(cards) container.innerHTML+=`<div><div class="tv-section-title">${sec.label}</div><div class="tv-grid">${cards}</div></div>`;
   });
   document.getElementById('last-updated').textContent='Last updated: '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  if(weatherData){const b=document.getElementById('tv-weather-bar');if(b&&!b.innerHTML) b.innerHTML=`<span>${weatherData}</span><span style="opacity:.5">Draper, UT</span>`;}
+  if(weatherData){renderWeatherUI();}
   // Help banners (per item)
   updateHelpUI();
   // Hourly weather
@@ -3139,7 +3531,9 @@ if(!kitchenDark){const kv=document.getElementById('kitchen-view');if(kv)kv.class
 if(!breakroomDark){const bv=document.getElementById('breakroom-view');if(bv){bv.classList.remove('br-dark');bv.classList.add('br-light');}}
 if(!headcountDark){const hv=document.getElementById('headcount-view');if(hv)hv.classList.add('hc-light');}
 updateDateLabel();loadShiftNotes();render();
-fetchWeather();
+renderManagerSettingsUI();
+startWeatherPolling();
+fetchWeather(true);
 initFirebase();
 </script>
 </body>
